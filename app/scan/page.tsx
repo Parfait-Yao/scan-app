@@ -205,7 +205,7 @@ function ScanContent() {
 
             console.log("Réponse API externe:", produit);
 
-            return
+            
             // Vérifie si le produit existe dans leur réponse
             if (!produit || !produit.imei) {
               toast.error("IMEI non trouvé dans leur système", {
