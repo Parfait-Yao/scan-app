@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"  
+}
+
+model Inventaire {
+  id Int @id @default(autoincrement())
+  date DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  inventaireItems InventaireItem[]
+}
+
+model InventaireItem {
+  id Int @id @default(autoincrement())
+  imei String @unique
+  marque String
+  model String
+  capacity String
+  couleur String
+
+  inventaireId  Int
+  inventaire    Inventaire @relation(fields: [inventaireId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
