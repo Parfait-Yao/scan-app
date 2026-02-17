@@ -19,7 +19,7 @@ export async function GET() {
     });
 
     // Agrégation par mois (YYYY-MM)
-    const inventairesEvolution: FrequencyMap = inventairesPerMonthRaw.reduce((acc: FrequencyMap, item) => {
+    const inventairesEvolution: FrequencyMap = inventairesPerMonthRaw.reduce((acc: FrequencyMap, item: { date: Date; _count: { id: number } }) => {
       const month = item.date.toISOString().slice(0, 7); // "YYYY-MM"
       acc[month] = (acc[month] || 0) + item._count.id;
       return acc;
@@ -29,7 +29,7 @@ export async function GET() {
     const allItems = await prisma.inventaireItem.findMany();
 
     // 3. Nombre total par modèle (tous les scans)
-    const models: FrequencyMap = allItems.reduce((acc: FrequencyMap, item: { model: string; }) => {
+    const models: FrequencyMap = allItems.reduce((acc: FrequencyMap, item) => {
       const model = item.model || 'Inconnu';
       acc[model] = (acc[model] || 0) + 1;
       return acc;
@@ -40,7 +40,7 @@ export async function GET() {
     const leastFrequentModel = sortedModels[sortedModels.length - 1]?.[0] || 'N/A';
 
     // 4. Couleurs les plus fréquentes (global)
-    const colorsGlobal: FrequencyMap = allItems.reduce((acc: FrequencyMap, item: { color: string; }) => {
+    const colorsGlobal: FrequencyMap = allItems.reduce((acc: FrequencyMap, item) => {
       const color = item.color || 'Inconnu';
       acc[color] = (acc[color] || 0) + 1;
       return acc;
@@ -49,8 +49,8 @@ export async function GET() {
     const sortedColorsGlobal = Object.entries(colorsGlobal).sort((a, b) => b[1] - a[1]);
     const mostFrequentColor = sortedColorsGlobal[0]?.[0] || 'N/A';
 
-    // 5. Grades les plus fréquents (global) – remplace dépôt
-    const gradesGlobal: FrequencyMap = allItems.reduce((acc: FrequencyMap, item: { revvoGrade: string; }) => {
+    // 5. Grades les plus fréquents (global)
+    const gradesGlobal: FrequencyMap = allItems.reduce((acc: FrequencyMap, item) => {
       const grade = item.revvoGrade || 'Inconnu';
       acc[grade] = (acc[grade] || 0) + 1;
       return acc;
@@ -59,8 +59,8 @@ export async function GET() {
     const sortedGradesGlobal = Object.entries(gradesGlobal).sort((a, b) => b[1] - a[1]);
     const mostFrequentGrade = sortedGradesGlobal[0]?.[0] || 'N/A';
 
-    // 6. Répartition des couleurs par grade (revvoGrade)
-    const colorsByGrade: ColorByGrade = allItems.reduce((acc: ColorByGrade, item: { revvoGrade: string; color: string; }) => {
+    // 6. Répartition des couleurs par grade
+    const colorsByGrade: ColorByGrade = allItems.reduce((acc: ColorByGrade, item) => {
       const grade = item.revvoGrade || 'Inconnu';
       const color = item.color || 'Inconnu';
       acc[grade] = acc[grade] || {};
@@ -69,7 +69,7 @@ export async function GET() {
     }, {});
 
     // 7. Répartition des couleurs par modèle
-    const colorsByModel: ColorByModel = allItems.reduce((acc: ColorByModel, item: { model: string; color: string; }) => {
+    const colorsByModel: ColorByModel = allItems.reduce((acc: ColorByModel, item) => {
       const model = item.model || 'Inconnu';
       const color = item.color || 'Inconnu';
       acc[model] = acc[model] || {};
@@ -80,12 +80,12 @@ export async function GET() {
     return NextResponse.json({
       inventairesEvolution,
       models,
-      colorsByGrade,          // ← remplacé colorsByDepot
+      colorsByGrade,
       colorsByModel,
       mostFrequentModel,
       leastFrequentModel,
       mostFrequentColor,
-      mostFrequentGrade,      // ← remplacé mostFrequentDepot
+      mostFrequentGrade,
     });
   } catch (error) {
     console.error('Erreur dashboard:', error);
