@@ -2,25 +2,16 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
-// Type qui correspond EXACTEMENT aux champs sélectionnés dans la requête
-type ScanSelected = {
-  barcode: string;
-  depot: string;
-  createdAt: Date;
-};
-
-// Type qui correspond EXACTEMENT aux champs sélectionnés pour Produit
-type ProduitSelected = {
-  barcode: string;
-  marque: string;
+// Types adaptés à InventaireItem
+type ItemSelected = {
+  imei: string;
+  brand: string;
   model: string;
   capacity: string;
-  couleur: string;
-  depot: string | null;
-  depotVente: string | null;
-  quantite: number;
-  prixUnitaire: number | null;
-  description: string | null;
+  color: string;
+  revvoGrade: string;
+  status: string;
+  createdAt: Date;
 };
 
 export async function GET(request: Request) {
@@ -51,20 +42,25 @@ export async function GET(request: Request) {
       inventaireId = lastInventaire.id;
     }
 
-    // Récupère les scans
-    const scans: ScanSelected[] = await prisma.scan.findMany({
+    // Récupère les InventaireItem de cet inventaire
+    const items: ItemSelected[] = await prisma.inventaireItem.findMany({
       where: { inventaireId },
       select: {
-        barcode: true,
-        depot: true,
+        imei: true,
+        brand: true,
+        model: true,
+        capacity: true,
+        color: true,
+        revvoGrade: true,
+        status: true,
         createdAt: true,
       },
     });
 
-    if (scans.length === 0) {
+    if (items.length === 0) {
       return NextResponse.json({
         produits: [],
-        scans: [],
+        scans: [], // ou items: []
         grandTotalA: 0,
         grandTotalB: 0,
         grandTotal: 0,
@@ -79,87 +75,58 @@ export async function GET(request: Request) {
       });
     }
 
-    // Récupère les produits – typage précis
-    const barcodes = scans.map((s: ScanSelected) => s.barcode);  // ← CORRECTION ICI
-
-    const produits: ProduitSelected[] = await prisma.produit.findMany({
-      where: { barcode: { in: barcodes } },
-      select: {
-        barcode: true,
-        marque: true,
-        model: true,
-        capacity: true,
-        couleur: true,
-        depot: true,
-        depotVente: true,
-        quantite: true,
-        prixUnitaire: true,
-        description: true,
-      },
-    });
-
-    // Associe chaque scan à son produit complet
-    const scansAvecDetails = scans.map((scan: ScanSelected) => {
-      const produit = produits.find(p => p.barcode === scan.barcode);
-      return {
-        barcode: scan.barcode,
-        marque: produit?.marque || 'N/A',
-        model: produit?.model || 'Inconnu',
-        capacity: produit?.capacity || 'Inconnu',
-        couleur: produit?.couleur || 'Inconnu',
-        depot: scan.depot || produit?.depot || 'Inconnu',
-        depotVente: produit?.depotVente || 'N/A',
-        quantite: produit?.quantite || 1,
-        prixUnitaire: produit?.prixUnitaire || null,
-        description: produit?.description || null,
-        dateScan: scan.createdAt.toISOString(),
-      };
-    });
-
-    // Groupement pour le tableau
-    const grouped = produits.reduce((acc: Record<string, {
+    // Groupement pour le tableau (par model, capacity, color, revvoGrade)
+    const grouped = items.reduce((acc: Record<string, {
       model: string;
       capacity: string;
-      couleur: string;
-      depot: string;
-      quantiteTotale: number;
+      color: string;
+      revvoGrade: string;
       nbAppareils: number;
-    }>, p: ProduitSelected) => {
-      const key = `${p.model || 'Inconnu'}-${p.capacity || 'Inconnu'}-${p.couleur || 'Inconnu'}-${p.depot || 'Inconnu'}`;
+    }>, item) => {
+      const key = `${item.model || 'Inconnu'}-${item.capacity || 'Inconnu'}-${item.color || 'Inconnu'}-${item.revvoGrade || 'Inconnu'}`;
 
       if (!acc[key]) {
         acc[key] = {
-          model: p.model || 'Inconnu',
-          capacity: p.capacity || 'Inconnu',
-          couleur: p.couleur || 'Inconnu',
-          depot: p.depot || 'Inconnu',
-          quantiteTotale: 0,
+          model: item.model || 'Inconnu',
+          capacity: item.capacity || 'Inconnu',
+          color: item.color || 'Inconnu',
+          revvoGrade: item.revvoGrade || 'Inconnu',
           nbAppareils: 0,
         };
       }
 
-      acc[key].quantiteTotale += Number(p.quantite) || 0;
       acc[key].nbAppareils += 1;
 
       return acc;
     }, {});
 
-    // Calcul des grands totaux
+    // Calcul des grands totaux (basé sur revvoGrade)
     let grandTotalA = 0;
     let grandTotalB = 0;
-    let grandTotalAppareils = 0;
+    let grandTotalAppareils = items.length;
 
     Object.values(grouped).forEach(g => {
-      if (g.depot === 'A') grandTotalA += g.quantiteTotale;
-      if (g.depot === 'B') grandTotalB += g.quantiteTotale;
-      grandTotalAppareils += g.nbAppareils;
+      if (g.revvoGrade === 'A') grandTotalA += g.nbAppareils;
+      if (g.revvoGrade === 'B') grandTotalB += g.nbAppareils;
     });
 
     const grandTotal = grandTotalA + grandTotalB;
 
+    // Liste détaillée pour export Excel si besoin
+    const itemsAvecDetails = items.map(item => ({
+      imei: item.imei,
+      brand: item.brand,
+      model: item.model,
+      capacity: item.capacity,
+      color: item.color,
+      revvoGrade: item.revvoGrade,
+      status: item.status,
+      dateScan: item.createdAt.toISOString(),
+    }));
+
     return NextResponse.json({
       produits: Object.values(grouped),
-      scans: scansAvecDetails,
+      scans: itemsAvecDetails, // ou items si tu préfères garder le nom
       grandTotalA,
       grandTotalB,
       grandTotal,

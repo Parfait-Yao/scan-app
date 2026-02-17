@@ -14,17 +14,18 @@ model Inventaire {
   inventaireItems InventaireItem[]
 }
 
+
 model InventaireItem {
   id Int @id @default(autoincrement())
   imei String @unique
-  marque String
+  brand String
   model String
+  status String
   capacity String
-  couleur String
-
+  color String
+  revvoGrade String 
   inventaireId  Int
   inventaire    Inventaire @relation(fields: [inventaireId], references: [id])
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

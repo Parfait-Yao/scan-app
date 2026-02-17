@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -7,7 +8,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaClipboardList, FaBarcode, FaCalendarAlt } from 'react-icons/fa';
 import { BsUpcScan } from "react-icons/bs";
-import { Moon, Sun } from 'lucide-react'; // Ajout d'icônes pour le toggle (installez lucide-react si nécessaire)
+import { Moon, Sun } from 'lucide-react';
 
 // Import des composants shadcn Table
 import {
@@ -135,7 +136,7 @@ export default function InventairesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-100 to-white dark:from-gray-950 dark:to-black flex items-center justify-center text-black dark:text-white">
+      <div className="min-h-screen bg-linear-to-b from-gray-100 to-white dark:from-gray-950 dark:to-black flex items-center justify-center text-black dark:text-white">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-t-4 border-emerald-500 rounded-full animate-spin mx-auto mb-6"></div>
           <p className="text-xl font-medium">Chargement des inventaires...</p>
@@ -146,7 +147,7 @@ export default function InventairesPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-100 to-white dark:from-gray-950 dark:to-black flex items-center justify-center text-black dark:text-white p-8">
+      <div className="min-h-screen bg-linear-to-b from-gray-100 to-white dark:from-gray-950 dark:to-black flex items-center justify-center text-black dark:text-white p-8">
         <div className="text-center max-w-md">
           <h1 className="text-5xl font-bold text-red-500 mb-6">Oups !</h1>
           <p className="text-2xl mb-8">{error}</p>
@@ -174,7 +175,7 @@ export default function InventairesPage() {
         </div>
       </header>
 
-      {/* Cards statistiques en haut */}
+      {/* Cards statistiques en haut – inchangées */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
         <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md p-6 rounded-2xl border border-emerald-500/30 shadow-xl flex items-center gap-5">
           <div className="bg-emerald-500/20 p-4 rounded-xl">
@@ -217,11 +218,11 @@ export default function InventairesPage() {
       </div>
 
       <main className="max-w-7xl mx-auto flex flex-col gap-6 justify-center items-center">
-        {/* Bouton créer */}
+        {/* Bouton créer – inchangé */}
         <div className="mb-8 text-center">
           <button
             onClick={createNewInventaire}
-            className="flex justify-center items-center bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 px-6 py-2 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 text-white"
+            className="flex justify-center items-center bg-linear-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 px-6 py-2 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 text-white"
           >
             <BsUpcScan className="mr-2" />Créer un nouvel inventaire
           </button>

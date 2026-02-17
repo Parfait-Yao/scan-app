@@ -9,10 +9,10 @@ import autoTable from 'jspdf-autotable';
 import { FaTableCells } from "react-icons/fa6";
 import { BsUpcScan } from "react-icons/bs";
 import * as XLSX from 'xlsx';
-import { toast } from 'react-toastify/unstyled';
+import { toast } from 'react-toastify';
 import { Moon, Sun } from 'lucide-react';
 
-// Import shadcn Table components
+// Import shadcn Table
 import {
   Table,
   TableBody,
@@ -24,51 +24,35 @@ import {
 } from "@/components/ui/table";
 
 // ────────────────────────────────────────────────
-// Interfaces (inchangées)
+// Interfaces adaptées aux nouveaux champs
 // ────────────────────────────────────────────────
 
 interface GroupedProduit {
   model: string;
   capacity: string;
-  couleur: string;
-  depot: string;
-  quantiteTotale: number;
+  color: string;          // ← changé de couleur à color
+  revvoGrade: string;     // ← grade (A, B, etc.)
   nbAppareils: number;
 }
 
-interface Scan {
-  barcode: string;
-  marque: string;
+interface InventaireItem {
+  imei: string;
+  brand: string;
   model: string;
   capacity: string;
-  couleur: string;
-  depot: string;
-  depotVente: string | null;
-  quantite: number;
-  prixUnitaire: number | null;
-  description: string | null;
+  color: string;
+  revvoGrade: string;
+  status: string;
 }
 
 interface SummaryResponse {
   produits: GroupedProduit[];
-  scans: Scan[];
+  scans: InventaireItem[]; // liste détaillée pour Excel
   grandTotalA: number;
   grandTotalB: number;
   grandTotal: number;
   date: string;
   inventaireId?: number;
-}
-
-interface RegroupedItem {
-  model: string;
-  capacity: string;
-  couleur: string;
-  countA: number;
-  totalA: number;
-  countB: number;
-  totalB: number;
-  countVente: number;
-  totalVente: number;
 }
 
 // ────────────────────────────────────────────────
@@ -83,7 +67,7 @@ function ResumeContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Gestion du thème
+  // Gestion du thème (inchangé)
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   useEffect(() => {
@@ -146,7 +130,7 @@ function ResumeContent() {
       <div className="min-h-screen bg-gradient-to-b from-gray-100 to-white dark:from-gray-950 dark:to-black flex items-center justify-center text-black dark:text-white">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-t-4 border-emerald-500 rounded-full animate-spin mx-auto mb-6"></div>
-          <p className="text-xl font-medium">Chargement de l’inventaire...</p>
+          <p className="text-xl font-medium">Chargement du résumé...</p>
         </div>
       </div>
     );
@@ -154,7 +138,7 @@ function ResumeContent() {
 
   if (error || !inventaire) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-100 to-white dark:from-gray-950 dark:to-black flex items-center justify-center text-black dark:text-white p-6">
+      <div className="min-h-screen bg-linear-to-b from-gray-100 to-white dark:from-gray-950 dark:to-black flex items-center justify-center text-black dark:text-white p-6">
         <div className="text-center max-w-md">
           <h1 className="text-5xl font-bold text-red-500 mb-6">Oups !</h1>
           <p className="text-2xl mb-8">{error || 'Aucun appareil scanné dans cet inventaire'}</p>
@@ -167,21 +151,22 @@ function ResumeContent() {
   }
 
   const produits: GroupedProduit[] = Array.isArray(inventaire.produits) ? inventaire.produits : [];
-  const scans: Scan[] = Array.isArray(inventaire.scans) ? inventaire.scans : [];
+  const scans: InventaireItem[] = Array.isArray(inventaire.scans) ? inventaire.scans : [];
   const date: string = inventaire.date || new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const totalA: number = Number(inventaire.grandTotalA) || 0;
   const totalB: number = Number(inventaire.grandTotalB) || 0;
   const totalGeneral: number = Number(inventaire.grandTotal) || 0;
 
-  // Re-groupement (inchangé)
-  const regrouped = produits.reduce((acc: Record<string, RegroupedItem>, p: GroupedProduit) => {
-    const key = `${p.model}-${p.capacity}-${p.couleur}`;
+  // Groupement adapté (model, capacity, color, revvoGrade)
+  const regrouped = produits.reduce((acc: Record<string, any>, p: GroupedProduit) => {
+    const key = `${p.model}-${p.capacity}-${p.color}-${p.revvoGrade}`;
 
     if (!acc[key]) {
       acc[key] = {
         model: p.model,
         capacity: p.capacity,
-        couleur: p.couleur,
+        color: p.color,
+        revvoGrade: p.revvoGrade,
         countA: 0,
         totalA: 0,
         countB: 0,
@@ -191,54 +176,53 @@ function ResumeContent() {
       };
     }
 
-    if (p.depot === 'A') {
+    if (p.revvoGrade === 'A') {
       acc[key].countA += p.nbAppareils;
-      acc[key].totalA += p.quantiteTotale;
-    } else if (p.depot === 'B') {
+      acc[key].totalA += p.nbAppareils;
+    } else if (p.revvoGrade === 'B') {
       acc[key].countB += p.nbAppareils;
-      acc[key].totalB += p.quantiteTotale;
-    } else if (p.depot === 'Vente') {
+      acc[key].totalB += p.nbAppareils;
+    } else {
       acc[key].countVente += p.nbAppareils;
-      acc[key].totalVente += p.quantiteTotale;
+      acc[key].totalVente += p.nbAppareils;
     }
 
     return acc;
   }, {});
 
-  // PDF corrigé pour TypeScript + visibilité parfaite (texte noir forcé)
+  // PDF – adapté aux nouveaux noms
   const downloadPDF = () => {
     const doc = new jsPDF();
 
     doc.setFontSize(18);
-    doc.setTextColor(0, 0, 0); // Noir forcé (plus d'erreur TS)
+    doc.setTextColor(0);
     doc.text(`Résumé Inventaire #${inventaireId || 'Actuel'}`, 20, 20);
 
     doc.setFontSize(12);
-    doc.setTextColor(80, 80, 80);
+    doc.setTextColor(80);
     doc.text(`Date : ${date}`, 20, 30);
 
     doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(0);
     doc.text('Totaux :', 20, 45);
 
     doc.setFontSize(12);
-    doc.text(`Dépôt A : ${totalA}`, 20, 55);
-    doc.text(`Dépôt B : ${totalB}`, 20, 62);
+    doc.text(`Grade A : ${totalA}`, 20, 55);
+    doc.text(`Grade B : ${totalB}`, 20, 62);
     doc.text(`Total général : ${totalGeneral}`, 20, 69);
 
     if (Object.keys(regrouped).length > 0) {
-      const tableColumn = ['Modèle', 'Capacité', 'Couleur', 'A', 'Total A', 'B', 'Total dépôt vente', 'Dépôt vente', 'Total B', 'Total'];
+      const tableColumn = ['Modèle', 'Capacité', 'Couleur', 'Grade', 'A', 'Total A', 'B', 'Total B', 'Total'];
       const tableRows = Object.values(regrouped).map((group) => [
         group.model || '',
         group.capacity || '',
-        group.couleur || '',
+        group.color || '',
+        group.revvoGrade || '',
         group.countA || 0,
         group.totalA || 0,
         group.countB || 0,
-        group.totalVente || 0,
-        group.countVente || 0,
         group.totalB || 0,
-        group.totalA + group.totalB + group.totalVente || 0,
+        group.totalA + group.totalB || 0,
       ]);
 
       autoTable(doc, {
@@ -246,25 +230,13 @@ function ResumeContent() {
         body: tableRows,
         startY: 80,
         theme: 'grid',
-        styles: {
-          fontSize: 10,
-          cellPadding: 3,
-          textColor: 0, // Noir forcé (plus d'erreur TS sur theme)
-          lineColor: [0, 0, 0],
-          lineWidth: 0.1,
-        },
-        headStyles: {
-          fillColor: [34, 197, 94],
-          textColor: 255,
-        },
-        alternateRowStyles: {
-          fillColor: [240, 240, 240], // Gris clair fixe (pas de ternaire)
-        },
-        margin: { bottom: 30 }, // Espace pour pied de page
+        styles: { fontSize: 10, cellPadding: 3, textColor: 0 },
+        headStyles: { fillColor: [34, 197, 94], textColor: 255 },
+        alternateRowStyles: { fillColor: [240, 240, 240] },
       });
     }
 
-    const pageCount = (doc as any).internal.getNumberOfPages(); // Syntaxe correcte (pas d'erreur TS)
+    const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(10);
@@ -275,7 +247,7 @@ function ResumeContent() {
     doc.save(`Inventaire_${inventaireId || 'Actuel'}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  // Excel (inchangé)
+  // Excel – adapté aux nouveaux champs
   const downloadExcel = () => {
     if (scans.length === 0) {
       toast.error('Aucun scan à exporter');
@@ -283,16 +255,13 @@ function ResumeContent() {
     }
 
     const excelData = scans.map(scan => ({
-      'Code Barre': scan.barcode,
-      'Marque': scan.marque || '',
+      'IMEI': scan.imei,
+      'Marque': scan.brand || '',
       'Modèle': scan.model || '',
       'Capacité': scan.capacity || '',
-      'Couleur': scan.couleur || '',
-      'Dépôt (Grade)': scan.depot || '',
-      'Dépôt Vente': scan.depotVente || '',
-      'Quantité': scan.quantite || 1,
-      'Prix unitaire': scan.prixUnitaire !== null ? scan.prixUnitaire : '',
-      'Description': scan.description || '',
+      'Couleur': scan.color || '',
+      'Grade': scan.revvoGrade || '',
+      'Status': scan.status || '',
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
@@ -303,25 +272,25 @@ function ResumeContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 via-gray-200 to-white dark:from-gray-950 dark:via-gray-900 dark:to-black text-black dark:text-white ">
-      {/* En-tête avec toggle */}
+    <div className="min-h-screen bg-linear-to-b from-gray-100 via-gray-200 to-white dark:from-gray-950 dark:via-gray-900 dark:to-black text-black dark:text-white ">
+      {/* En-tête avec toggle – inchangé */}
       <header className="sticky top-0 z-10 dark:bg-black/80 backdrop-blur-lg rounded-2xl py-4 border border-gray-200/50 dark:border-gray-700/50  mb-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-6 flex flex-col justify-between items-center">
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 w-full">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-linear-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent">
               Résumé Inventaire {inventaireId ? `#${inventaireId}` : ''}
             </h1>
             
           </div>
 
-          {/* Totaux */}
+          {/* Totaux – adapté à revvoGrade */}
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center w-full">
             <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md p-6 rounded-2xl border border-emerald-500/30 shadow-xl">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Dépôt A</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Grade A</p>
               <p className="text-4xl font-bold text-emerald-400">{totalA}</p>
             </div>
             <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md p-6 rounded-2xl border border-blue-500/30 shadow-xl">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Dépôt B</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Grade B</p>
               <p className="text-4xl font-bold text-blue-400">{totalB}</p>
             </div>
             <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md p-6 rounded-2xl border border-yellow-500/30 shadow-xl">
@@ -332,7 +301,7 @@ function ResumeContent() {
         </div>
       </header>
 
-      {/* Tableau */}
+      {/* Tableau – adapté aux nouveaux noms */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {produits.length === 0 ? (
           <p className="text-center text-gray-600 dark:text-gray-400 text-xl">Aucun appareil scanné dans cet inventaire</p>
@@ -344,37 +313,35 @@ function ResumeContent() {
                   <TableHead className="p-4 text-left font-semibold text-black dark:text-white">Modèle</TableHead>
                   <TableHead className="p-4 text-left font-semibold text-black dark:text-white">Capacité</TableHead>
                   <TableHead className="p-4 text-left font-semibold text-black dark:text-white">Couleur</TableHead>
+                  <TableHead className="p-4 text-center font-semibold text-black dark:text-white">Grade</TableHead>
                   <TableHead className="p-4 text-center font-semibold text-black dark:text-white">A</TableHead>
                   <TableHead className="p-4 text-center font-semibold text-black dark:text-white">Total A</TableHead>
                   <TableHead className="p-4 text-center font-semibold text-black dark:text-white">B</TableHead>
-                  <TableHead className="p-4 text-center font-semibold text-black dark:text-white">Total dépôt vente</TableHead>
-                  <TableHead className="p-4 text-center font-semibold text-black dark:text-white">Dépôt vente</TableHead>
                   <TableHead className="p-4 text-center font-semibold text-black dark:text-white">Total B</TableHead>
                   <TableHead className="p-4 text-center font-semibold text-black dark:text-white">Total</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
-                {Object.values(regrouped).map((group: RegroupedItem, idx: number) => (
+                {Object.values(regrouped).map((group: any, idx: number) => (
                   <TableRow
                     key={idx}
                     className="border-b border-gray-300 dark:border-gray-800 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition"
                   >
                     <TableCell className="p-4 font-semibold text-black dark:text-white">{group.model}</TableCell>
                     <TableCell className="p-4 text-black dark:text-white">{group.capacity}</TableCell>
-                    <TableCell className="p-4 text-black dark:text-white">{group.couleur}</TableCell>
+                    <TableCell className="p-4 text-black dark:text-white">{group.color}</TableCell>
+                    <TableCell className="p-4 text-center text-black dark:text-white">{group.revvoGrade}</TableCell>
                     <TableCell className="p-4 text-center text-black dark:text-white">{group.countA}</TableCell>
                     <TableCell className="p-4 text-center font-bold text-emerald-600 dark:text-emerald-400">
                       {group.totalA}
                     </TableCell>
                     <TableCell className="p-4 text-center text-black dark:text-white">{group.countB}</TableCell>
-                    <TableCell className="p-4 text-center text-black dark:text-white">{group.totalVente}</TableCell>
-                    <TableCell className="p-4 text-center text-black dark:text-white">{group.countVente}</TableCell>
                     <TableCell className="p-4 text-center font-bold text-blue-600 dark:text-blue-400">
                       {group.totalB}
                     </TableCell>
                     <TableCell className="p-4 text-center font-bold text-yellow-600 dark:text-yellow-400">
-                      {group.totalA + group.totalB + group.totalVente}
+                      {group.totalA + group.totalB}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -382,7 +349,7 @@ function ResumeContent() {
 
               <TableFooter className="bg-gray-200 dark:bg-gray-900 font-bold">
                 <TableRow>
-                  <TableCell colSpan={3} className="p-5 text-right text-lg text-black dark:text-white">
+                  <TableCell colSpan={4} className="p-5 text-right text-lg text-black dark:text-white">
                     Totaux :
                   </TableCell>
                   <TableCell className="p-5 text-center"></TableCell>
@@ -396,16 +363,16 @@ function ResumeContent() {
           </div>
         )}
 
-        {/* Boutons */}
+        {/* Boutons – inchangés */}
         <div className="mt-12 flex flex-col sm:flex-row items-center justify-center flex-wrap gap-4">
           <Link
             href={`/scan?inventaireId=${inventaireId}`}
-            className="bg-gradient-to-r flex items-center justify-center from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 px-5 py-3 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 text-white text-center"
+            className="bg-linear-to-r flex items-center justify-center from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 px-5 py-3 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 text-white text-center"
           >
             <BsUpcScan className="mr-2" /> Continuer à scanner
           </Link>
 
-          <Link href="/" className="flex justify-center items-center gap-2 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 px-5 py-3 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 text-white text-center">
+          <Link href="/" className="flex justify-center items-center gap-2 bg-linear-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 px-5 py-3 rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 text-white text-center">
             <FaTableCells /> Voir l’inventaire
           </Link>
 
@@ -436,11 +403,11 @@ function ResumeContent() {
   );
 }
 
-// Page principale avec Suspense
+// Page principale avec Suspense (inchangée)
 export default function ResumePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-b from-gray-100 to-white dark:from-gray-950 dark:to-black flex items-center justify-center text-black dark:text-white">
+      <div className="min-h-screen bg-linear-to-b from-gray-100 to-white dark:from-gray-950 dark:to-black flex items-center justify-center text-black dark:text-white">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-t-4 border-emerald-500 rounded-full animate-spin mx-auto mb-6"></div>
           <p className="text-xl font-medium">Chargement du résumé...</p>

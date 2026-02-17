@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -144,51 +145,6 @@ function ScanContent() {
         Quagga.start();
         setIsScanning(true);
 
-        // Détection + incrémentation conditionnelle
-        // Quagga.onDetected(async (data) => {
-        //   let code = data?.codeResult?.code?.trim();
-        //   if (!code) return;
-
-        //   code = code.replace(/[^0-9]/g, "");
-
-        //   try {
-        //     const res = await fetch("/api/scan", {
-        //       method: "POST",
-        //       headers: { "Content-Type": "application/json" },
-        //       body: JSON.stringify({
-        //         barcode: code,
-        //         inventaireId: currentInventaireId,
-        //       }),
-        //     });
-
-        //     const json = await res.json();
-
-        //     if (!res.ok || json.error) {
-        //       toast.error(json.error || "Erreur ajout (déjà scanné ?)", {
-        //         autoClose: 1200,
-        //       });
-        //       return;
-        //     }
-
-        //     setScannedCount((prev) => prev + 1);
-        //     playSuccessBeep();
-        //     if (navigator.vibrate) navigator.vibrate(150);
-
-        //     toast.success(
-        //       `+1 (${json.produit.model} ${json.produit.capacity})`,
-        //       { autoClose: 800 },
-        //     );
-        //   } catch {
-        //     toast.error("Erreur réseau", { autoClose: 1200 });
-        //   }
-
-        //   setTimeout(() => {
-        //     if (isMounted.current) {
-        //       Quagga.start();
-        //       setIsScanning(true);
-        //     }
-        //   }, 600);
-        // });
         Quagga.onDetected(async (data) => {
           let code = data?.codeResult?.code?.trim();
           if (!code) return;
@@ -196,44 +152,54 @@ function ScanContent() {
           code = code.replace(/[^0-9]/g, "");
 
           try {
-            // Appel direct à leur API avec l'IMEI scanné
-            const response = await axios.get(
-              `https://api.revvo.africa/inventory/product-serialize/${code}`,
-            );
+  // Appel unique à leur API
+  const response = await axios.get(
+    `https://api.revvo.africa/inventory/product-serialize/${code}`
+  );
 
-            const produit = response.data;
+  const produit = response.data;
 
-            console.log("Réponse API externe:", produit);
+  if (!produit || !produit.imei) {
+    toast.error("IMEI non trouvé dans leur système", { autoClose: 2000 });
+    return;
+  }
 
-            
-            // Vérifie si le produit existe dans leur réponse
-            if (!produit || !produit.imei) {
-              toast.error("IMEI non trouvé dans leur système", {
-                autoClose: 2000,
-              });
-              return;
-            }
+  // Envoie au back : IMEI + inventaireId + l'objet produit complet
+  const saveRes = await fetch("/api/scan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      imei: code,
+      inventaireId: currentInventaireId,
+      produit, // ← on envoie tout l'objet reçu
+    }),
+  });
 
-            // Incrémente et joue le son seulement si succès
-            setScannedCount((prev) => prev + 1);
-            playSuccessBeep();
-            if (navigator.vibrate) navigator.vibrate(150);
+  const json = await saveRes.json();
 
-            // Toast avec les vraies infos
-            toast.success(
-              `+1 (${produit.brand || ""} ${produit.model || ""} ${produit.capacity || ""} - Grade ${produit.revvoGrade || "N/A"})`,
-              { autoClose: 800 },
-            );
-          } catch (err: any) {
-            if (err.response?.status === 404) {
-              toast.error("IMEI inconnu dans leur base", { autoClose: 2000 });
-            } else {
-              toast.error("Erreur lors de la vérification", {
-                autoClose: 2000,
-              });
-            }
-            console.error("Erreur API externe:", err);
-          }
+  if (!saveRes.ok || json.error) {
+    toast.error(json.error || "Erreur ajout (déjà scanné ?)", { autoClose: 2000 });
+    return;
+  }
+
+  // Succès
+  setScannedCount((prev) => prev + 1);
+  playSuccessBeep();
+  if (navigator.vibrate) navigator.vibrate(150);
+
+  toast.success(
+    `+1 (${produit.brand || ''} ${produit.model || ''} ${produit.capacity || ''} - Grade ${produit.revvoGrade || 'N/A'})`,
+    { autoClose: 800 }
+  );
+
+} catch (err: any) {
+  if (err.response?.status === 404) {
+    toast.error("IMEI inconnu dans leur base", { autoClose: 2000 });
+  } else {
+    toast.error("Erreur lors de la vérification", { autoClose: 2000 });
+  }
+  console.error("Erreur API externe:", err);
+}
 
           // Re-démarre le scanner (inchangé)
           setTimeout(() => {

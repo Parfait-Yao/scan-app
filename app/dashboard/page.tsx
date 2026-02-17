@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/dashboard/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -16,19 +15,19 @@ import {
 } from 'recharts';
 import { BarChart as BarIcon, Palette, Archive, Package } from "lucide-react";
 
-// Typage des données de l'API
+// Typage adapté aux nouveaux champs
 interface DashboardData {
   inventairesEvolution: Record<string, number>;           // "YYYY-MM": count
   models: Record<string, number>;                         // modèle → nombre total
-  colorsByDepot: Record<string, Record<string, number>>;  // dépôt → couleur → count
+  colorsByGrade: Record<string, Record<string, number>>;  // grade → couleur → count
   colorsByModel: Record<string, Record<string, number>>;  // modèle → couleur → count
   mostFrequentModel: string;
   leastFrequentModel: string;
   mostFrequentColor: string;
-  mostFrequentDepot: string;
+  mostFrequentGrade: string;                              // ← revvoGrade le plus fréquent
 }
 
-// Map des noms de couleurs vers leurs codes hex (utilisé uniquement dans tooltip)
+// Map des noms de couleurs vers hex (inchangé)
 const COLOR_MAP: Record<string, string> = {
   'Rouge': '#ff0000',
   'Bleu': '#0000ff',
@@ -100,15 +99,15 @@ export default function Dashboard() {
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
-  const colorsByDepotData = Object.entries(data.colorsByDepot).flatMap(([depot, colors]) =>
-    Object.entries(colors).map(([color, count]) => ({ depot, color, count }))
+  const colorsByGradeData = Object.entries(data.colorsByGrade).flatMap(([grade, colors]) =>
+    Object.entries(colors).map(([color, count]) => ({ grade, color, count }))
   );
 
   const colorsByModelData = Object.entries(data.colorsByModel).flatMap(([model, colors]) =>
     Object.entries(colors).map(([color, count]) => ({ model, color, count }))
   );
 
-  // Custom Tooltip (affiche le nom exact de la couleur + count)
+  // Custom Tooltip (inchangé)
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const entry = payload[0].payload;
@@ -131,7 +130,7 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-8 min-h-screen bg-background text-foreground">
-      {/* Cards stylées - inchangées */}
+      {/* Cards stylées – inchangées */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
           <CardHeader className="flex flex-row items-center gap-3">
@@ -166,17 +165,17 @@ export default function Dashboard() {
         <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
           <CardHeader className="flex flex-row items-center gap-3">
             <Archive className="h-6 w-6 text-primary" />
-            <CardTitle>Dépôt le plus fréquent</CardTitle>
+            <CardTitle>Grade le plus fréquent</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{data.mostFrequentDepot}</p>
+            <p className="text-2xl font-bold">{data.mostFrequentGrade}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts stylés */}
+      {/* Charts stylés – inchangés, juste noms adaptés */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Bar Chart : Nombre d'inventaires par mois - référence pour la couleur */}
+        {/* Bar Chart : Nombre d'inventaires par mois */}
         <Card className="shadow-lg border-border">
           <CardHeader>
             <CardTitle>Nombre d&apos;inventaires par mois</CardTitle>
@@ -198,7 +197,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Bar Chart : Nombre par modèle - même couleur */}
+        {/* Bar Chart : Nombre par modèle */}
         <Card className="shadow-lg border-border">
           <CardHeader>
             <CardTitle>Nombre par modèle</CardTitle>
@@ -220,20 +219,19 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Bar Chart : Répartition des couleurs par grade (dépôt) */}
+        {/* Bar Chart : Répartition des couleurs par grade */}
         <Card className="shadow-lg border-border lg:col-span-2">
           <CardHeader>
-            <CardTitle>Répartition des couleurs par grade (dépôt)</CardTitle>
+            <CardTitle>Répartition des couleurs par grade</CardTitle>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <RechartsBarChart data={colorsByDepotData}>
+              <RechartsBarChart data={colorsByGradeData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-                <XAxis dataKey="depot" stroke="hsl(var(--muted-foreground))" />
+                <XAxis dataKey="grade" stroke="hsl(var(--muted-foreground))" />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                {/* Même couleur bleu que le chart inventaires */}
                 <Bar dataKey="count" name="Nombre par couleur" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
               </RechartsBarChart>
             </ResponsiveContainer>
@@ -253,7 +251,6 @@ export default function Dashboard() {
                 <YAxis stroke="hsl(var(--muted-foreground))" />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                {/* Même couleur bleu que le chart inventaires */}
                 <Bar dataKey="count" name="Nombre par couleur" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
               </RechartsBarChart>
             </ResponsiveContainer>

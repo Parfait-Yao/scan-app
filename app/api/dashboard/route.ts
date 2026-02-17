@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/dashboard/route.ts
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
 type FrequencyMap = Record<string, number>;
-type ColorByDepot = Record<string, FrequencyMap>;   // depot → { couleur → count }
+type ColorByGrade = Record<string, FrequencyMap>;   // grade → { couleur → count }
 type ColorByModel = Record<string, FrequencyMap>;   // model → { couleur → count }
 
 export async function GET() {
@@ -26,24 +25,12 @@ export async function GET() {
       return acc;
     }, {});
 
-    // 2. Tous les scans
-    const allScans = await prisma.scan.findMany();
+    // 2. Tous les InventaireItem (scans)
+    const allItems = await prisma.inventaireItem.findMany();
 
-    // 3. Tous les produits scannés (via barcodes uniques)
-    const barcodes = [...new Set(allScans.map(s => s.barcode))];
-    const allProduits = await prisma.produit.findMany({
-      where: { barcode: { in: barcodes } },
-    });
-
-    // Map barcode → produit
-    const produitMap = allProduits.reduce<Record<string, any>>((acc, p) => {
-      acc[p.barcode] = p;
-      return acc;
-    }, {});
-
-    // 4. Nombre total par modèle (tous les scans)
-    const models: FrequencyMap = allScans.reduce((acc: FrequencyMap, scan) => {
-      const model = produitMap[scan.barcode]?.model || 'Inconnu';
+    // 3. Nombre total par modèle (tous les scans)
+    const models: FrequencyMap = allItems.reduce((acc: FrequencyMap, item: { model: string; }) => {
+      const model = item.model || 'Inconnu';
       acc[model] = (acc[model] || 0) + 1;
       return acc;
     }, {});
@@ -52,9 +39,9 @@ export async function GET() {
     const mostFrequentModel = sortedModels[0]?.[0] || 'N/A';
     const leastFrequentModel = sortedModels[sortedModels.length - 1]?.[0] || 'N/A';
 
-    // 5. Couleurs les plus fréquentes (global)
-    const colorsGlobal: FrequencyMap = allScans.reduce((acc: FrequencyMap, scan) => {
-      const color = produitMap[scan.barcode]?.couleur || 'Inconnu';
+    // 4. Couleurs les plus fréquentes (global)
+    const colorsGlobal: FrequencyMap = allItems.reduce((acc: FrequencyMap, item: { color: string; }) => {
+      const color = item.color || 'Inconnu';
       acc[color] = (acc[color] || 0) + 1;
       return acc;
     }, {});
@@ -62,43 +49,43 @@ export async function GET() {
     const sortedColorsGlobal = Object.entries(colorsGlobal).sort((a, b) => b[1] - a[1]);
     const mostFrequentColor = sortedColorsGlobal[0]?.[0] || 'N/A';
 
-    // 6. Dépôts les plus fréquents (global)
-    const depotsGlobal: FrequencyMap = allScans.reduce((acc: FrequencyMap, scan) => {
-      const depot = scan.depot || 'Inconnu';
-      acc[depot] = (acc[depot] || 0) + 1;
+    // 5. Grades les plus fréquents (global) – remplace dépôt
+    const gradesGlobal: FrequencyMap = allItems.reduce((acc: FrequencyMap, item: { revvoGrade: string; }) => {
+      const grade = item.revvoGrade || 'Inconnu';
+      acc[grade] = (acc[grade] || 0) + 1;
       return acc;
     }, {});
 
-    const sortedDepotsGlobal = Object.entries(depotsGlobal).sort((a, b) => b[1] - a[1]);
-    const mostFrequentDepot = sortedDepotsGlobal[0]?.[0] || 'N/A';
+    const sortedGradesGlobal = Object.entries(gradesGlobal).sort((a, b) => b[1] - a[1]);
+    const mostFrequentGrade = sortedGradesGlobal[0]?.[0] || 'N/A';
 
-    // 7. Répartition des couleurs par grade (dépôt)
-    const colorsByDepot: ColorByDepot = allScans.reduce((acc: ColorByDepot, scan) => {
-      const depot = scan.depot || 'Inconnu';
-      const color = produitMap[scan.barcode]?.couleur || 'Inconnu';
-      acc[depot] = acc[depot] || {};
-      acc[depot][color] = (acc[depot][color] || 0) + 1;
+    // 6. Répartition des couleurs par grade (revvoGrade)
+    const colorsByGrade: ColorByGrade = allItems.reduce((acc: ColorByGrade, item: { revvoGrade: string; color: string; }) => {
+      const grade = item.revvoGrade || 'Inconnu';
+      const color = item.color || 'Inconnu';
+      acc[grade] = acc[grade] || {};
+      acc[grade][color] = (acc[grade][color] || 0) + 1;
       return acc;
     }, {});
 
-    // 8. Répartition des couleurs par modèle
-    const colorsByModel: ColorByModel = allScans.reduce((acc: ColorByModel, scan) => {
-      const model = produitMap[scan.barcode]?.model || 'Inconnu';
-      const color = produitMap[scan.barcode]?.couleur || 'Inconnu';
+    // 7. Répartition des couleurs par modèle
+    const colorsByModel: ColorByModel = allItems.reduce((acc: ColorByModel, item: { model: string; color: string; }) => {
+      const model = item.model || 'Inconnu';
+      const color = item.color || 'Inconnu';
       acc[model] = acc[model] || {};
       acc[model][color] = (acc[model][color] || 0) + 1;
       return acc;
     }, {});
 
     return NextResponse.json({
-      inventairesEvolution,   // { "YYYY-MM": count }
-      models,                 // { "Model1": count, ... }
-      colorsByDepot,          // { "DepotA": { "Noir": count, ... } }
-      colorsByModel,          // { "Model1": { "Noir": count, ... } }
+      inventairesEvolution,
+      models,
+      colorsByGrade,          // ← remplacé colorsByDepot
+      colorsByModel,
       mostFrequentModel,
       leastFrequentModel,
       mostFrequentColor,
-      mostFrequentDepot,
+      mostFrequentGrade,      // ← remplacé mostFrequentDepot
     });
   } catch (error) {
     console.error('Erreur dashboard:', error);
