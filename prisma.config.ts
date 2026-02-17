@@ -1,12 +1,16 @@
-import 'dotenv/config';  // ← Pour charger .env si besoin (installez npm install dotenv si pas déjà)
-import { defineConfig, env } from '@prisma/config';  // ← Import depuis Prisma
+// prisma.config.ts
+import { defineConfig } from '@prisma/config';
+import * as dotenv from 'dotenv';
+
+// Charge .env explicitement pour Prisma CLI
+dotenv.config({ path: '.env' }); // ou '.env.local' si tu utilises .env.local
 
 export default defineConfig({
-  schema: 'prisma/schema.prisma',  // ← Chemin vers votre schema
+  schema: 'prisma/schema.prisma',
   migrations: {
-    path: 'prisma/migrations',  // ← Chemin par défaut pour les migrations
+    path: 'prisma/migrations',
   },
   datasource: {
-    url: env('DATABASE_URL'),  // ← Votre URL Supabase ici via env
+    url: process.env.DATABASE_URL,
   },
 });

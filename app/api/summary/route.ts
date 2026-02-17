@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 // app/api/summary/route.ts
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
