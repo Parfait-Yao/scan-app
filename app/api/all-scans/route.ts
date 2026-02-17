@@ -3,6 +3,20 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
+// Typage pour InventaireItem
+interface InventaireItemRow {
+  imei: string;
+  brand: string;
+  model: string;
+  capacity: string;
+  color: string;
+  revvoGrade: string;
+  status: string;
+  createdAt: Date;
+  inventaireId: number;
+  inventaire?: { date: Date } | null;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -12,7 +26,7 @@ export async function GET(request: Request) {
     const whereClause: any = {};
 
     if (model) {
-      whereClause.produit = { model: { contains: model, mode: 'insensitive' } };
+      whereClause.model = { contains: model, mode: 'insensitive' };
     }
 
     if (date) {
@@ -23,44 +37,34 @@ export async function GET(request: Request) {
       whereClause.createdAt = { gte: startDate, lte: endDate };
     }
 
-    const allScans = await prisma.scan.findMany({
+    const allItems: InventaireItemRow[] = await prisma.inventaireItem.findMany({
       include: {
-        inventaire: true,  // ← seulement cette relation existe
+        inventaire: true,
       },
       where: whereClause,
       orderBy: { createdAt: 'desc' },
     });
 
-    // Récupérer les produits séparément via barcodes
-    const barcodes = [...new Set(allScans.map(s => s.barcode))];
-    const produits = await prisma.produit.findMany({
-      where: { barcode: { in: barcodes } },
-    });
+    // Pas besoin de fetch produits séparément → tout est déjà dans InventaireItem
 
-    // Map barcode → produit
-    const produitMap = produits.reduce((acc: Record<string, any>, p) => {
-      acc[p.barcode] = p;
-      return acc;
-    }, {});
-
-    // Mapper les données pour le frontend
-    const formattedScans = allScans.map(scan => ({
-      barcode: scan.barcode,
-      marque: produitMap[scan.barcode]?.marque || 'N/A',
-      model: produitMap[scan.barcode]?.model || 'N/A',
-      capacity: produitMap[scan.barcode]?.capacity || 'N/A',
-      couleur: produitMap[scan.barcode]?.couleur || 'N/A',
-      depot: scan.depot || 'N/A',
-      depotVente: produitMap[scan.barcode]?.depotVente || 'N/A',
-      quantite: produitMap[scan.barcode]?.quantite || 1,
-      prixUnitaire: produitMap[scan.barcode]?.prixUnitaire || 'N/A',
-      description: produitMap[scan.barcode]?.description || 'N/A',
-      dateScan: scan.createdAt.toISOString(),
-      inventaireId: scan.inventaireId,
-      inventaireDate: scan.inventaire?.date.toISOString() || 'N/A',
+    // Formatage pour le frontend (même structure que ton ancien code)
+    const formattedItems = allItems.map(item => ({
+      imei: item.imei,
+      marque: item.brand || 'N/A',
+      model: item.model || 'N/A',
+      capacity: item.capacity || 'N/A',
+      couleur: item.color || 'N/A',
+      depot: item.revvoGrade || 'N/A', // ← revvoGrade remplace depot
+      depotVente: 'N/A',               // ← plus utilisé, tu peux supprimer si tu veux
+      quantite: 1,                     // ← fixe car pas de quantité dans ton modèle
+      prixUnitaire: 'N/A',             // ← pas dans ton modèle
+      description: 'N/A',              // ← pas dans ton modèle
+      dateScan: item.createdAt.toISOString(),
+      inventaireId: item.inventaireId,
+      inventaireDate: item.inventaire?.date.toISOString() || 'N/A',
     }));
 
-    return NextResponse.json(formattedScans);
+    return NextResponse.json(formattedItems);
   } catch (error) {
     console.error('Erreur fetch all scans:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });

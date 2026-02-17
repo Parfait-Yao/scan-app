@@ -154,7 +154,7 @@ function ScanContent() {
           try {
   // Appel unique à leur API
   const response = await axios.get(
-    `https://api.revvo.africa/inventory/product-serialize/${code}`
+    `${process.env.EXTERNAL_API_BASE}/product-serialize/${code}`
   );
 
   const produit = response.data;

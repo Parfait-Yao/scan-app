@@ -1,22 +1,39 @@
-// app/api/recup/route.ts (récupération des détails d'un produit par son barcode)
+// app/api/recup/route.ts
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const barcode = searchParams.get('barcode');
+  const imei = searchParams.get('imei');  // ← paramètre changé en imei
 
-  if (!barcode) {
-    return NextResponse.json({ error: 'Barcode requis' }, { status: 400 });
+  if (!imei) {
+    return NextResponse.json({ error: 'IMEI requis' }, { status: 400 });
   }
 
   try {
-    const produit = await prisma.produit.findUnique({
-      where: { barcode },
+    // Recherche dans InventaireItem
+    const item = await prisma.inventaireItem.findFirst({
+      where: { imei },
+      select: {
+        imei: true,
+        brand: true,
+        model: true,
+        capacity: true,
+        color: true,
+        revvoGrade: true,
+        status: true,
+        inventaireId: true,    // ← ajouté comme demandé
+        createdAt: true,       // ← ajouté aussi (utile pour la date de scan)
+      },
     });
 
-    return NextResponse.json({ produit });
+    if (!item) {
+      return NextResponse.json({ error: 'IMEI non trouvé' }, { status: 404 });
+    }
+
+    return NextResponse.json({ produit: item });
   } catch (error) {
+    console.error('Erreur recup IMEI:', error);
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
   }
 }

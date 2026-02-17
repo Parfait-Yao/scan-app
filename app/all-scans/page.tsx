@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/all-scans/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -25,18 +24,15 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
-// Typage des scans complets
+// Typage adapté à InventaireItem
 interface ScanFull {
-  barcode: string;
+  imei: string;
   marque: string;
   model: string;
   capacity: string;
-  couleur: string;
-  depot: string;
-  depotVente: string;
-  quantite: number;
-  prixUnitaire: number | 'N/A';
-  description: string;
+  color: string;
+  revvoGrade: string;
+  status: string;
   dateScan: string;
   inventaireId: number;
   inventaireDate: string;
@@ -101,11 +97,11 @@ export default function AllScansPage() {
     );
   }
 
-  // Affichage en cas d'erreur réseau/serveur (vraie erreur)
+  // Affichage en cas d'erreur
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted text-destructive">
-        <div className="text-center max-w-md space-y-6 p-8 bg-card  shadow-2xl">
+        <div className="text-center max-w-md space-y-6 p-8 bg-card shadow-2xl">
           <h1 className="text-6xl font-bold">Erreur</h1>
           <p className="text-2xl">{error}</p>
         </div>
@@ -115,7 +111,7 @@ export default function AllScansPage() {
 
   return (
     <div className="p-8 space-y-10 min-h-screen bg-linear-to-br from-background to-muted text-foreground ">
-      <Card className="shadow-2xl border-border  overflow-hidden">
+      <Card className="shadow-2xl border-border overflow-hidden">
         <CardHeader className="bg-linear-to-r from-primary to-primary/80 text-primary-foreground">
           <CardTitle className="flex items-center gap-3 text-2xl font-bold">
             <Smartphone className="h-7 w-7" />
@@ -178,20 +174,17 @@ export default function AllScansPage() {
           )}
 
           {/* Le tableau reste TOUJOURS visible */}
-          <div className="overflow-x-auto  border border-border shadow-inner">
+          <div className="overflow-x-auto border border-border shadow-inner">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="w-[150px] font-bold">IMEI/Barcode</TableHead>
+                  <TableHead className="w-[150px] font-bold">IMEI</TableHead>
                   <TableHead className="font-bold">Marque</TableHead>
                   <TableHead className="font-bold">Modèle</TableHead>
                   <TableHead className="font-bold">Capacité</TableHead>
                   <TableHead className="font-bold">Couleur</TableHead>
-                  <TableHead className="font-bold">Dépôt</TableHead>
-                  <TableHead className="font-bold">Dépôt Vente</TableHead>
-                  <TableHead className="font-bold">Quantité</TableHead>
-                  <TableHead className="font-bold">Prix Unitaire</TableHead>
-                  <TableHead className="font-bold">Description</TableHead>
+                  <TableHead className="font-bold">Grade</TableHead>
+                  <TableHead className="font-bold">Status</TableHead>
                   <TableHead className="font-bold">Date Scan</TableHead>
                   <TableHead className="font-bold">Inventaire ID</TableHead>
                   <TableHead className="font-bold">Date Inventaire</TableHead>
@@ -200,7 +193,7 @@ export default function AllScansPage() {
               <TableBody>
                 {scans.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
                       {hasFilters
                         ? "Aucun résultat pour les filtres appliqués"
                         : "Aucun scan enregistré pour le moment"}
@@ -209,16 +202,13 @@ export default function AllScansPage() {
                 ) : (
                   scans.map((scan, index) => (
                     <TableRow key={index} className="hover:bg-muted/30 transition-all duration-200">
-                      <TableCell className="font-medium">{scan.barcode}</TableCell>
+                      <TableCell className="font-medium">{scan.imei}</TableCell>
                       <TableCell>{scan.marque}</TableCell>
                       <TableCell>{scan.model}</TableCell>
                       <TableCell>{scan.capacity}</TableCell>
-                      <TableCell>{scan.couleur}</TableCell>
-                      <TableCell>{scan.depot}</TableCell>
-                      <TableCell>{scan.depotVente}</TableCell>
-                      <TableCell>{scan.quantite}</TableCell>
-                      <TableCell>{scan.prixUnitaire}</TableCell>
-                      <TableCell>{scan.description}</TableCell>
+                      <TableCell>{scan.color}</TableCell>
+                      <TableCell>{scan.revvoGrade}</TableCell>
+                      <TableCell>{scan.status}</TableCell>
                       <TableCell>{new Date(scan.dateScan).toLocaleString('fr-FR')}</TableCell>
                       <TableCell>{scan.inventaireId}</TableCell>
                       <TableCell>{new Date(scan.inventaireDate).toLocaleDateString('fr-FR')}</TableCell>
