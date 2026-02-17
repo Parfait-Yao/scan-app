@@ -28,57 +28,78 @@ export async function GET() {
       {}
     );
 
-    // 2. Tous les InventaireItem (scans)
+    // 2. Tous les InventaireItem
     const allItems = await prisma.inventaireItem.findMany();
 
-    // 3. Nombre total par modèle (tous les scans)
-    const models: FrequencyMap = allItems.reduce((acc: FrequencyMap, item) => {
-      const model = item.model || 'Inconnu';
-      acc[model] = (acc[model] || 0) + 1;
-      return acc;
-    }, {});
+    // 3. Nombre total par modèle
+    const models: FrequencyMap = allItems.reduce(
+      (acc: FrequencyMap, item: { model: string }) => {
+        const model = item.model || 'Inconnu';
+        acc[model] = (acc[model] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
 
-    const sortedModels = Object.entries(models).sort((a, b) => b[1] - a[1]);
+    const sortedModels = Object.entries(models).sort(
+      (a: [string, number], b: [string, number]) => b[1] - a[1]
+    );
     const mostFrequentModel = sortedModels[0]?.[0] || 'N/A';
     const leastFrequentModel = sortedModels[sortedModels.length - 1]?.[0] || 'N/A';
 
     // 4. Couleurs les plus fréquentes (global)
-    const colorsGlobal: FrequencyMap = allItems.reduce((acc: FrequencyMap, item) => {
-      const color = item.color || 'Inconnu';
-      acc[color] = (acc[color] || 0) + 1;
-      return acc;
-    }, {});
+    const colorsGlobal: FrequencyMap = allItems.reduce(
+      (acc: FrequencyMap, item: { color: string }) => {
+        const color = item.color || 'Inconnu';
+        acc[color] = (acc[color] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
 
-    const sortedColorsGlobal = Object.entries(colorsGlobal).sort((a, b) => b[1] - a[1]);
+    const sortedColorsGlobal = Object.entries(colorsGlobal).sort(
+      (a: [string, number], b: [string, number]) => b[1] - a[1]
+    );
     const mostFrequentColor = sortedColorsGlobal[0]?.[0] || 'N/A';
 
-    // 5. Grades les plus fréquents (global)
-    const gradesGlobal: FrequencyMap = allItems.reduce((acc: FrequencyMap, item) => {
-      const grade = item.revvoGrade || 'Inconnu';
-      acc[grade] = (acc[grade] || 0) + 1;
-      return acc;
-    }, {});
+    // 5. Grades (revvoGrade) les plus fréquents (global)
+    const gradesGlobal: FrequencyMap = allItems.reduce(
+      (acc: FrequencyMap, item: { revvoGrade: string }) => {
+        const grade = item.revvoGrade || 'Inconnu';
+        acc[grade] = (acc[grade] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
 
-    const sortedGradesGlobal = Object.entries(gradesGlobal).sort((a, b) => b[1] - a[1]);
+    const sortedGradesGlobal = Object.entries(gradesGlobal).sort(
+      (a: [string, number], b: [string, number]) => b[1] - a[1]
+    );
     const mostFrequentGrade = sortedGradesGlobal[0]?.[0] || 'N/A';
 
     // 6. Répartition des couleurs par grade
-    const colorsByGrade: ColorByGrade = allItems.reduce((acc: ColorByGrade, item) => {
-      const grade = item.revvoGrade || 'Inconnu';
-      const color = item.color || 'Inconnu';
-      acc[grade] = acc[grade] || {};
-      acc[grade][color] = (acc[grade][color] || 0) + 1;
-      return acc;
-    }, {});
+    const colorsByGrade: ColorByGrade = allItems.reduce(
+      (acc: ColorByGrade, item: { revvoGrade: string; color: string }) => {
+        const grade = item.revvoGrade || 'Inconnu';
+        const color = item.color || 'Inconnu';
+        acc[grade] = acc[grade] || {};
+        acc[grade][color] = (acc[grade][color] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
 
     // 7. Répartition des couleurs par modèle
-    const colorsByModel: ColorByModel = allItems.reduce((acc: ColorByModel, item) => {
-      const model = item.model || 'Inconnu';
-      const color = item.color || 'Inconnu';
-      acc[model] = acc[model] || {};
-      acc[model][color] = (acc[model][color] || 0) + 1;
-      return acc;
-    }, {});
+    const colorsByModel: ColorByModel = allItems.reduce(
+      (acc: ColorByModel, item: { model: string; color: string }) => {
+        const model = item.model || 'Inconnu';
+        const color = item.color || 'Inconnu';
+        acc[model] = acc[model] || {};
+        acc[model][color] = (acc[model][color] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
 
     return NextResponse.json({
       inventairesEvolution,
