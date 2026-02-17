@@ -3,13 +3,16 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactCompiler: true,
 
-  // ← C’est la clé qui résout 100 % des erreurs TS en build Vercel
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true, // garde ça pour le moment
   },
 
-  // Optionnel : désactive l'en-tête "powered by Next.js"
   poweredByHeader: false,
+
+  // Force Vercel à inclure les fichiers Prisma
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client'],
+  },
 };
 
 export default nextConfig;
