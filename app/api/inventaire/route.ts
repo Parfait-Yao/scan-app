@@ -2,17 +2,21 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
-// Interface pour le résumé envoyé au frontend
-interface InventaireResume {
+// Interface pour les inventaires bruts (retour de findMany)
+interface InventaireBase {
   id: number;
   date: Date;
   createdAt: Date;
+}
+
+// Interface pour le résumé envoyé au frontend
+interface InventaireResume extends InventaireBase {
   nbScans: number; // nombre d'appareils scannés dans cet inventaire
 }
 
 export async function GET() {
   try {
-    const inventaires = await prisma.inventaire.findMany({
+    const inventaires: InventaireBase[] = await prisma.inventaire.findMany({
       select: {
         id: true,
         date: true,
@@ -22,8 +26,8 @@ export async function GET() {
     });
 
     // Calcul dynamique du nombre de scans par inventaire
-    const inventairesAvecNbScans = await Promise.all(
-      inventaires.map(async (inv) => {
+    const inventairesAvecNbScans: InventaireResume[] = await Promise.all(
+      inventaires.map(async (inv: InventaireBase) => {
         const nbScans = await prisma.inventaireItem.count({
           where: { inventaireId: inv.id },
         });
