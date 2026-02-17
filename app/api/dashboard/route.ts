@@ -19,11 +19,14 @@ export async function GET() {
     });
 
     // Agrégation par mois (YYYY-MM)
-    const inventairesEvolution: FrequencyMap = inventairesPerMonthRaw.reduce((acc: FrequencyMap, item: { date: Date; _count: { id: number } }) => {
-      const month = item.date.toISOString().slice(0, 7); // "YYYY-MM"
-      acc[month] = (acc[month] || 0) + item._count.id;
-      return acc;
-    }, {});
+    const inventairesEvolution: FrequencyMap = inventairesPerMonthRaw.reduce(
+      (acc: FrequencyMap, item: { date: Date; _count: { id: number } }) => {
+        const month = item.date.toISOString().slice(0, 7); // "YYYY-MM"
+        acc[month] = (acc[month] || 0) + item._count.id;
+        return acc;
+      },
+      {}
+    );
 
     // 2. Tous les InventaireItem (scans)
     const allItems = await prisma.inventaireItem.findMany();
