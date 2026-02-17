@@ -6,6 +6,14 @@ type FrequencyMap = Record<string, number>;
 type ColorByGrade = Record<string, FrequencyMap>;   // grade → { couleur → count }
 type ColorByModel = Record<string, FrequencyMap>;   // model → { couleur → count }
 
+// Typage pour le retour de groupBy (exactement ce que Prisma retourne)
+interface GroupByResult {
+  date: Date;
+  _count: {
+    id: number;
+  };
+}
+
 export async function GET() {
   try {
     // 1. Nombre d'inventaires créés par mois (12 derniers mois)
@@ -18,9 +26,9 @@ export async function GET() {
       _count: { id: true },
     });
 
-    // Agrégation par mois (YYYY-MM)
+    // Agrégation par mois (YYYY-MM) — typage explicite sur item
     const inventairesEvolution: FrequencyMap = inventairesPerMonthRaw.reduce(
-      (acc: FrequencyMap, item: { date: Date; _count: { id: number } }) => {
+      (acc: FrequencyMap, item: GroupByResult) => {
         const month = item.date.toISOString().slice(0, 7); // "YYYY-MM"
         acc[month] = (acc[month] || 0) + item._count.id;
         return acc;
@@ -28,7 +36,7 @@ export async function GET() {
       {}
     );
 
-    // 2. Tous les InventaireItem
+    // 2. Tous les InventaireItem (scans)
     const allItems = await prisma.inventaireItem.findMany();
 
     // 3. Nombre total par modèle
