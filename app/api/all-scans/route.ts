@@ -3,18 +3,25 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
-// Typage pour InventaireItem
+// Typage complet pour InventaireItem (basé sur ton schema.prisma)
 interface InventaireItemRow {
+  id: number;
   imei: string;
   brand: string;
   model: string;
+  status: string;
   capacity: string;
   color: string;
   revvoGrade: string;
-  status: string;
-  createdAt: Date;
   inventaireId: number;
-  inventaire?: { date: Date } | null;
+  createdAt: Date;
+  updatedAt: Date;
+  inventaire?: {
+    id: number;
+    date: Date;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
 }
 
 export async function GET(request: Request) {
@@ -37,6 +44,7 @@ export async function GET(request: Request) {
       whereClause.createdAt = { gte: startDate, lte: endDate };
     }
 
+    // Récupère les InventaireItem avec leur relation inventaire
     const allItems: InventaireItemRow[] = await prisma.inventaireItem.findMany({
       include: {
         inventaire: true,
@@ -45,20 +53,18 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Pas besoin de fetch produits séparément → tout est déjà dans InventaireItem
-
-    // Formatage pour le frontend (même structure que ton ancien code)
-    const formattedItems = allItems.map(item => ({
+    // Formatage pour le frontend (structure similaire à ton ancien code)
+    const formattedItems = allItems.map((item: InventaireItemRow) => ({
       imei: item.imei,
       marque: item.brand || 'N/A',
       model: item.model || 'N/A',
       capacity: item.capacity || 'N/A',
       couleur: item.color || 'N/A',
-      depot: item.revvoGrade || 'N/A', // ← revvoGrade remplace depot
-      depotVente: 'N/A',               // ← plus utilisé, tu peux supprimer si tu veux
-      quantite: 1,                     // ← fixe car pas de quantité dans ton modèle
-      prixUnitaire: 'N/A',             // ← pas dans ton modèle
-      description: 'N/A',              // ← pas dans ton modèle
+      depot: item.revvoGrade || 'N/A',      // revvoGrade remplace depot
+      depotVente: 'N/A',                     // non présent dans ton modèle
+      quantite: 1,                           // fixe (pas de quantité)
+      prixUnitaire: 'N/A',                   // non présent
+      description: 'N/A',                    // non présent
       dateScan: item.createdAt.toISOString(),
       inventaireId: item.inventaireId,
       inventaireDate: item.inventaire?.date.toISOString() || 'N/A',
