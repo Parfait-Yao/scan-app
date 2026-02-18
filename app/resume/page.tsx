@@ -235,7 +235,7 @@ function ResumeContent() {
       DateScan: dateScanFormatted,
     };
   });
-  // console.log('Données pour Excel:', excelData);
+  
   const ws = XLSX.utils.json_to_sheet(excelData);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Scans');
