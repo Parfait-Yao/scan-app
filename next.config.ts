@@ -10,12 +10,11 @@ const nextConfig: NextConfig = {
 
   poweredByHeader: false,
 
-  serverExternalPackages: ["@prisma/client"],
+  serverExternalPackages: ["@prisma/client"],   // garde-le, c’est bien
 
-  // Force SWC (stable) au lieu de Turbopack
+  // On supprime complètement le turbopack (il est invalide en Next.js 16)
   experimental: {
-    // @ts-ignore — turbopack n'est pas dans les types officiels
-    turbopack: false,
+    // plus de turbopack ici
   },
 };
 
