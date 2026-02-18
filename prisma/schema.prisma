@@ -25,6 +25,7 @@ model InventaireItem {
   color        String
   revvoGrade   String
   inventaireId Int
+  quantite       Int        @default(1)
   inventaire   Inventaire @relation(fields: [inventaireId], references: [id])
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt

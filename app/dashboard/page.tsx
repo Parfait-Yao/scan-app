@@ -13,21 +13,22 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { BarChart as BarIcon, Palette, Archive, Package } from "lucide-react";
+import { Package, Palette, Archive, Layers, Trophy } from "lucide-react";
 
-// Typage adapté aux nouveaux champs
+// Typage complet
 interface DashboardData {
-  inventairesEvolution: Record<string, number>;           // "YYYY-MM": count
-  models: Record<string, number>;                         // modèle → nombre total
-  colorsByGrade: Record<string, Record<string, number>>;  // grade → couleur → count
-  colorsByModel: Record<string, Record<string, number>>;  // modèle → couleur → count
+  inventairesEvolution: Record<string, number>;
+  models: Record<string, number>;
+  colorsByGrade: Record<string, Record<string, number>>;
+  colorsByModel: Record<string, Record<string, number>>;
   mostFrequentModel: string;
   leastFrequentModel: string;
   mostFrequentColor: string;
-  mostFrequentGrade: string;                              // ← revvoGrade le plus fréquent
+  mostFrequentGrade: string;
+  totalQuantite: number;
+  gradeTotals: Record<string, number>;  // A+, A, B, C, D, Inconnu
 }
 
-// Map des noms de couleurs vers hex (inchangé)
 const COLOR_MAP: Record<string, string> = {
   'Rouge': '#ff0000',
   'Bleu': '#0000ff',
@@ -45,6 +46,15 @@ const COLOR_MAP: Record<string, string> = {
   'Inconnu': '#cccccc',
 };
 
+const GRADE_COLORS: Record<string, string> = {
+  'A+': '#22c55e',
+  'A': '#16a34a',
+  'B': '#eab308',
+  'C': '#f97316',
+  'D': '#ef4444',
+  'Inconnu': '#6b7280',
+};
+
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,11 +64,11 @@ export default function Dashboard() {
     const fetchData = async () => {
       try {
         const res = await fetch('/api/dashboard');
-        if (!res.ok) throw new Error('Erreur chargement dashboard');
-        const json: DashboardData = await res.json();
+        if (!res.ok) throw new Error(`Erreur HTTP ${res.status}`);
+        const json = await res.json();
         setData(json);
       } catch (err) {
-        setError('Erreur lors du chargement des données');
+        setError('Impossible de charger les données du dashboard');
         console.error(err);
       } finally {
         setLoading(false);
@@ -90,37 +100,50 @@ export default function Dashboard() {
     );
   }
 
+  const gradeTotals = data.gradeTotals || {};
+
+  // Données pour le graphique Quantité par grade
+  const gradeChartData = [
+    { grade: 'A+', quantite: gradeTotals['A+'] || 0 },
+    { grade: 'A', quantite: gradeTotals['A'] || 0 },
+    { grade: 'B', quantite: gradeTotals['B'] || 0 },
+    { grade: 'C', quantite: gradeTotals['C'] || 0 },
+    { grade: 'D', quantite: gradeTotals['D'] || 0 },
+  ];
+
   // Préparation des données pour les charts
-  const inventairesChartData = Object.entries(data.inventairesEvolution)
+  const inventairesChartData = Object.entries(data.inventairesEvolution || {})
     .map(([month, count]) => ({ month, count }))
     .sort((a, b) => a.month.localeCompare(b.month));
 
-  const modelsChartData = Object.entries(data.models)
+  const modelsChartData = Object.entries(data.models || {})
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
-  const colorsByGradeData = Object.entries(data.colorsByGrade).flatMap(([grade, colors]) =>
+  const colorsByGradeData = Object.entries(data.colorsByGrade || {}).flatMap(([grade, colors]) =>
     Object.entries(colors).map(([color, count]) => ({ grade, color, count }))
   );
 
-  const colorsByModelData = Object.entries(data.colorsByModel).flatMap(([model, colors]) =>
+  const colorsByModelData = Object.entries(data.colorsByModel || {}).flatMap(([model, colors]) =>
     Object.entries(colors).map(([color, count]) => ({ model, color, count }))
   );
 
-  // Custom Tooltip (inchangé)
+  // Custom Tooltip amélioré
   const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
+    if (active && payload?.length) {
       const entry = payload[0].payload;
       return (
-        <div className="bg-background border border-border p-3 rounded-md shadow-md">
-          <p className="font-bold">{label}</p>
-          <p className="text-sm">
-            Couleur : <span style={{ color: COLOR_MAP[entry.color] || '#cccccc' }}>
-              {entry.color}
-            </span>
-          </p>
+        <div className="bg-background border border-border p-4 rounded-lg shadow-lg min-w-[180px]">
+          <p className="font-bold mb-2">{label}</p>
+          {entry.color && (
+            <p className="text-sm mb-1">
+              Couleur : <span style={{ color: COLOR_MAP[entry.color] || '#cccccc' }}>
+                {entry.color}
+              </span>
+            </p>
+          )}
           <p className="text-sm font-semibold">
-            Nombre : {entry.count}
+            Quantité : <span className="text-primary">{entry.count || entry.quantite || 0}</span>
           </p>
         </div>
       );
@@ -130,8 +153,9 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 space-y-8 min-h-screen bg-background text-foreground">
-      {/* Cards stylées – inchangées */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Cartes */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-6">
+        {/* Modèle le plus fréquent */}
         <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
           <CardHeader className="flex flex-row items-center gap-3">
             <Package className="h-6 w-6 text-primary" />
@@ -142,16 +166,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
-          <CardHeader className="flex flex-row items-center gap-3">
-            <Package className="h-6 w-6 text-primary" />
-            <CardTitle>Modèle le moins fréquent</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{data.leastFrequentModel}</p>
-          </CardContent>
-        </Card>
-
+        {/* Couleur la plus fréquente */}
         <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
           <CardHeader className="flex flex-row items-center gap-3">
             <Palette className="h-6 w-6 text-primary" />
@@ -162,20 +177,49 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
+        {/* Grade le plus fréquent */}
         <Card className="shadow-lg hover:shadow-xl transition-shadow border-border">
           <CardHeader className="flex flex-row items-center gap-3">
-            <Archive className="h-6 w-6 text-primary" />
+            <Trophy className="h-6 w-6 text-yellow-500" />
             <CardTitle>Grade le plus fréquent</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{data.mostFrequentGrade}</p>
+            <p className="text-2xl font-bold" style={{ color: GRADE_COLORS[data.mostFrequentGrade] || '#6b7280' }}>
+              {data.mostFrequentGrade}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Cartes des 5 grades */}
+        {['A+', 'A', 'B', 'C', 'D'].map(grade => (
+          <Card key={grade} className="shadow-lg hover:shadow-xl transition-shadow border-border">
+            <CardHeader className="flex flex-row items-center gap-3">
+              <Archive className="h-6 w-6" style={{ color: GRADE_COLORS[grade] }} />
+              <CardTitle>{grade}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold" style={{ color: GRADE_COLORS[grade] }}>
+                {gradeTotals[grade] || 0}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+
+        {/* Total global */}
+        <Card className="shadow-lg hover:shadow-xl transition-shadow border-border lg:col-span-2">
+          <CardHeader className="flex flex-row items-center gap-3">
+            <Layers className="h-6 w-6 text-primary" />
+            <CardTitle>Total appareils scannés</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-primary">{data.totalQuantite}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts stylés – inchangés, juste noms adaptés */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Bar Chart : Nombre d'inventaires par mois */}
+        {/* Inventaires par mois */}
         <Card className="shadow-lg border-border">
           <CardHeader>
             <CardTitle>Nombre d&apos;inventaires par mois</CardTitle>
@@ -186,10 +230,7 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
-                />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }} />
                 <Legend />
                 <Bar dataKey="count" fill="hsl(var(--primary))" name="Inventaires" radius={[8, 8, 0, 0]} />
               </RechartsBarChart>
@@ -197,10 +238,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Bar Chart : Nombre par modèle */}
+        {/* Quantité par modèle */}
         <Card className="shadow-lg border-border">
           <CardHeader>
-            <CardTitle>Nombre par modèle</CardTitle>
+            <CardTitle>Quantité par modèle</CardTitle>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -208,18 +249,34 @@ export default function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" angle={-45} textAnchor="end" height={80} />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
-                />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }} />
                 <Legend />
-                <Bar dataKey="value" fill="hsl(var(--primary))" name="Nombre" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="value" fill="hsl(var(--primary))" name="Quantité totale" radius={[8, 8, 0, 0]} />
               </RechartsBarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Bar Chart : Répartition des couleurs par grade */}
+        {/* Quantité par grade */}
+        <Card className="shadow-lg border-border lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Quantité par grade</CardTitle>
+          </CardHeader>
+          <CardContent className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <RechartsBarChart data={gradeChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                <XAxis dataKey="grade" stroke="hsl(var(--muted-foreground))" />
+                <YAxis stroke="hsl(var(--muted-foreground))" />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }} />
+                <Legend />
+                <Bar dataKey="quantite" fill="hsl(var(--primary))" name="Quantité" radius={[8, 8, 0, 0]} />
+              </RechartsBarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Répartition couleurs par grade */}
         <Card className="shadow-lg border-border lg:col-span-2">
           <CardHeader>
             <CardTitle>Répartition des couleurs par grade</CardTitle>
@@ -232,13 +289,13 @@ export default function Dashboard() {
                 <YAxis stroke="hsl(var(--muted-foreground))" />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                <Bar dataKey="count" name="Nombre par couleur" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="count" name="Quantité par couleur" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
               </RechartsBarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Bar Chart : Répartition des couleurs par modèle */}
+        {/* Répartition couleurs par modèle */}
         <Card className="shadow-lg border-border lg:col-span-2">
           <CardHeader>
             <CardTitle>Répartition des couleurs par modèle</CardTitle>
@@ -251,7 +308,7 @@ export default function Dashboard() {
                 <YAxis stroke="hsl(var(--muted-foreground))" />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                <Bar dataKey="count" name="Nombre par couleur" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="count" name="Quantité par couleur" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
               </RechartsBarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -261,20 +318,22 @@ export default function Dashboard() {
   );
 }
 
-// Custom Tooltip (inchangé)
+// Custom Tooltip amélioré
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const entry = payload[0].payload;
     return (
-      <div className="bg-background border border-border p-3 rounded-md shadow-md">
-        <p className="font-bold">{label}</p>
-        <p className="text-sm">
-          Couleur : <span style={{ color: COLOR_MAP[entry.color] || '#cccccc' }}>
-            {entry.color}
-          </span>
-        </p>
+      <div className="bg-background border border-border p-4 rounded-lg shadow-lg min-w-[180px]">
+        <p className="font-bold mb-2">{label}</p>
+        {entry.color && (
+          <p className="text-sm mb-1">
+            Couleur : <span style={{ color: COLOR_MAP[entry.color] || '#cccccc' }}>
+              {entry.color}
+            </span>
+          </p>
+        )}
         <p className="text-sm font-semibold">
-          Nombre : {entry.count}
+          Quantité : <span className="text-primary">{entry.count || entry.quantite || 0}</span>
         </p>
       </div>
     );

@@ -1,9 +1,7 @@
-/* eslint-disable prefer-const */
 // app/api/summary/route.ts
-import { prisma } from '@/lib/prisma';
-import { NextResponse } from 'next/server';
+import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
 
-// Types adaptés à InventaireItem
 type ItemSelected = {
   imei: string;
   brand: string;
@@ -13,19 +11,23 @@ type ItemSelected = {
   revvoGrade: string;
   status: string;
   createdAt: Date;
+  quantite: number;
 };
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const inventaireIdParam = searchParams.get('inventaireId');
+    const inventaireIdParam = searchParams.get("inventaireId");
 
     let inventaireId: number;
 
     if (inventaireIdParam) {
       inventaireId = Number(inventaireIdParam);
       if (isNaN(inventaireId)) {
-        return NextResponse.json({ error: 'ID inventaire invalide' }, { status: 400 });
+        return NextResponse.json(
+          { error: "ID inventaire invalide" },
+          { status: 400 },
+        );
       }
     } else {
       const todayStart = new Date();
@@ -33,17 +35,19 @@ export async function GET(request: Request) {
 
       const lastInventaire = await prisma.inventaire.findFirst({
         where: { date: { gte: todayStart } },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       });
 
       if (!lastInventaire) {
-        return NextResponse.json({ error: 'Aucun inventaire actif aujourd’hui' }, { status: 404 });
+        return NextResponse.json(
+          { error: "Aucun inventaire actif aujourd’hui" },
+          { status: 404 },
+        );
       }
 
       inventaireId = lastInventaire.id;
     }
 
-    // Récupère les InventaireItem de cet inventaire
     const items: ItemSelected[] = await prisma.inventaireItem.findMany({
       where: { inventaireId },
       select: {
@@ -55,93 +59,113 @@ export async function GET(request: Request) {
         revvoGrade: true,
         status: true,
         createdAt: true,
+        quantite: true,
       },
+      orderBy: { createdAt: "desc" },
     });
 
     if (items.length === 0) {
       return NextResponse.json({
         produits: [],
-        scans: [], // ou items: []
-        grandTotalA: 0,
-        grandTotalB: 0,
+        scans: [],
+        grandTotalByGrade: { "A+": 0, A: 0, B: 0, C: 0, D: 0 },
         grandTotal: 0,
-        date: new Date().toLocaleDateString('fr-FR', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
+        date: new Date().toLocaleDateString("fr-FR", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
         }),
-        message: 'Aucun appareil scanné dans cet inventaire',
+        message: "Aucun appareil scanné dans cet inventaire",
         inventaireId,
       });
     }
 
-    // Groupement pour le tableau (par model, capacity, color, revvoGrade)
-    const grouped = items.reduce((acc: Record<string, {
-      model: string;
-      capacity: string;
-      color: string;
-      revvoGrade: string;
-      nbAppareils: number;
-    }>, item) => {
-      const key = `${item.model || 'Inconnu'}-${item.capacity || 'Inconnu'}-${item.color || 'Inconnu'}-${item.revvoGrade || 'Inconnu'}`;
+    // Groupement
+    const grouped = items.reduce(
+      (
+        acc: Record<
+          string,
+          {
+            model: string;
+            capacity: string;
+            color: string;
+            revvoGrade: string;
+            quantiteTotale: number;
+          }
+        >,
+        item,
+      ) => {
+        const key = `${item.model || "Inconnu"}-${item.capacity || "Inconnu"}-${item.color || "Inconnu"}-${item.revvoGrade || "Inconnu"}`;
 
-      if (!acc[key]) {
-        acc[key] = {
-          model: item.model || 'Inconnu',
-          capacity: item.capacity || 'Inconnu',
-          color: item.color || 'Inconnu',
-          revvoGrade: item.revvoGrade || 'Inconnu',
-          nbAppareils: 0,
-        };
+        if (!acc[key]) {
+          acc[key] = {
+            model: item.model || "Inconnu",
+            capacity: item.capacity || "Inconnu",
+            color: item.color || "Inconnu",
+            revvoGrade: item.revvoGrade || "Inconnu",
+            quantiteTotale: 0,
+          };
+        }
+
+        acc[key].quantiteTotale += item.quantite || 1;
+        return acc;
+      },
+      {},
+    );
+
+    // Totaux par grade
+    const grandTotalByGrade: Record<string, number> = {
+      "A+": 0,
+      A: 0,
+      B: 0,
+      C: 0,
+      D: 0,
+    };
+
+    Object.values(grouped).forEach((group) => {
+      const grade = group.revvoGrade;
+      if (grade in grandTotalByGrade) {
+        grandTotalByGrade[grade] += group.quantiteTotale;
+      } else {
+        grandTotalByGrade["Inconnu"] =
+          (grandTotalByGrade["Inconnu"] || 0) + group.quantiteTotale;
       }
-
-      acc[key].nbAppareils += 1;
-
-      return acc;
-    }, {});
-
-    // Calcul des grands totaux (basé sur revvoGrade)
-    let grandTotalA = 0;
-    let grandTotalB = 0;
-    let grandTotalAppareils = items.length;
-
-    Object.values(grouped).forEach(g => {
-      if (g.revvoGrade === 'A') grandTotalA += g.nbAppareils;
-      if (g.revvoGrade === 'B') grandTotalB += g.nbAppareils;
     });
 
-    const grandTotal = grandTotalA + grandTotalB;
+    const grandTotal = Object.values(grandTotalByGrade).reduce(
+      (sum, val) => sum + val,
+      0,
+    );
 
-    // Liste détaillée pour export Excel si besoin
-    const itemsAvecDetails = items.map(item => ({
-      imei: item.imei,
-      brand: item.brand,
-      model: item.model,
-      capacity: item.capacity,
-      color: item.color,
-      revvoGrade: item.revvoGrade,
-      status: item.status,
+    // Liste détaillée pour Excel (ISO pour DateScan !)
+    const itemsAvecDetails = items.map((item) => ({
+      imei: item.imei || "N/A",
+      brand: item.brand || "N/A",
+      model: item.model || "N/A",
+      capacity: item.capacity || "N/A",
+      color: item.color || "N/A",
+      revvoGrade: item.revvoGrade || "N/A",
+      status: item.status || "N/A",
+      quantite: item.quantite ?? 1,
       dateScan: item.createdAt.toISOString(),
     }));
 
     return NextResponse.json({
       produits: Object.values(grouped),
-      scans: itemsAvecDetails, // ou items si tu préfères garder le nom
-      grandTotalA,
-      grandTotalB,
+      scans: itemsAvecDetails,
+      grandTotalByGrade,
       grandTotal,
-      grandTotalAppareils,
-      date: new Date().toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
+      date: new Date().toLocaleDateString("fr-FR", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       }),
       inventaireId,
     });
   } catch (error) {
-    console.error('Erreur summary:', error);
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    console.error("Erreur summary:", error);
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

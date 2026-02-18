@@ -3,76 +3,95 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
-// Typage complet pour InventaireItem (basé sur ton schema.prisma)
-interface InventaireItemRow {
-  id: number;
+// Typage propre et cohérent avec le reste de l’app
+interface ScanResponse {
   imei: string;
   brand: string;
   model: string;
-  status: string;
   capacity: string;
   color: string;
   revvoGrade: string;
+  status: string;
+  quantite: number;
+  dateScan: string;
   inventaireId: number;
-  createdAt: Date;
-  updatedAt: Date;
-  inventaire?: {
-    id: number;
-    date: Date;
-    createdAt: Date;
-    updatedAt: Date;
-  } | null;
+  inventaireDate: string;
 }
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const model = searchParams.get('model') || undefined;
-    const date = searchParams.get('date') || undefined;
+    const model = searchParams.get('model')?.trim() || undefined;
+    const dateStr = searchParams.get('date');
 
-    const whereClause: any = {};
+    // Clause where typée
+    const where: any = {};
 
     if (model) {
-      whereClause.model = { contains: model, mode: 'insensitive' };
+      where.model = {
+        contains: model,
+        mode: 'insensitive',
+      };
     }
 
-    if (date) {
-      const startDate = new Date(date);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(date);
-      endDate.setHours(23, 59, 59, 999);
-      whereClause.createdAt = { gte: startDate, lte: endDate };
+    if (dateStr) {
+      const start = new Date(dateStr);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(dateStr);
+      end.setHours(23, 59, 59, 999);
+
+      where.createdAt = {
+        gte: start,
+        lte: end,
+      };
     }
 
-    // Récupère les InventaireItem avec leur relation inventaire
-    const allItems: InventaireItemRow[] = await prisma.inventaireItem.findMany({
-      include: {
-        inventaire: true,
+    // Requête optimisée : select seulement les champs nécessaires
+    const items = await prisma.inventaireItem.findMany({
+      where,
+      select: {
+        imei: true,
+        brand: true,
+        model: true,
+        capacity: true,
+        color: true,
+        revvoGrade: true,
+        status: true,
+        quantite: true,
+        createdAt: true,
+        inventaire: {
+          select: {
+            id: true,
+            date: true,
+          },
+        },
       },
-      where: whereClause,
       orderBy: { createdAt: 'desc' },
+      // Optionnel : limite pour éviter de tout charger d’un coup
+      // take: 500,
     });
 
-    // Formatage pour le frontend (structure similaire à ton ancien code)
-    const formattedItems = allItems.map((item: InventaireItemRow) => ({
+    // Formatage propre pour le frontend
+    const formatted: ScanResponse[] = items.map(item => ({
       imei: item.imei,
-      marque: item.brand || 'N/A',
+      brand: item.brand || 'N/A',
       model: item.model || 'N/A',
       capacity: item.capacity || 'N/A',
-      couleur: item.color || 'N/A',
-      depot: item.revvoGrade || 'N/A',      // revvoGrade remplace depot
-      depotVente: 'N/A',                     // non présent dans ton modèle
-      quantite: 1,                           // fixe (pas de quantité)
-      prixUnitaire: 'N/A',                   // non présent
-      description: 'N/A',                    // non présent
+      color: item.color || 'N/A',
+      revvoGrade: item.revvoGrade || 'N/A',
+      status: item.status || 'N/A',
+      quantite: item.quantite ?? 1,          // null/undefined → 1
       dateScan: item.createdAt.toISOString(),
-      inventaireId: item.inventaireId,
-      inventaireDate: item.inventaire?.date.toISOString() || 'N/A',
+      inventaireId: item.inventaire?.id ?? 0,
+      inventaireDate: item.inventaire?.date.toISOString() ?? 'N/A',
     }));
 
-    return NextResponse.json(formattedItems);
+    return NextResponse.json(formatted);
   } catch (error) {
-    console.error('Erreur fetch all scans:', error);
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    console.error('Erreur /api/all-scans:', error);
+    return NextResponse.json(
+      { error: 'Erreur serveur lors de la récupération des scans' },
+      { status: 500 }
+    );
   }
 }

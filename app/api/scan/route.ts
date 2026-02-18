@@ -39,6 +39,7 @@ export async function POST(request: Request) {
         revvoGrade: produit.revvoGrade || 'N/A',
         status: produit.status || 'N/A',
         inventaireId: id,
+        quantite: 1,
       },
     });
 

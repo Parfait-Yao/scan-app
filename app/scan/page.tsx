@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
+import Link from "next/link";
 
 // Composant interne qui contient toute la logique (protégé par Suspense)
 function ScanContent() {
@@ -323,9 +324,24 @@ function ScanContent() {
       {/* Boutons fixes en bas – gardés tels quels */}
       <div className="w-1/3 mx-auto mb-20 z-50 bg-linear-to-t from-black/40 to-transparent px-5  flex justify-center items-center  ">
         <div className="flex justify-center items-center max-w-md mx-auto  flex-wrap">
-          <button className="w-100 bg-indigo-600 text-white py-2 px-2 rounded-xl font-semibold text-lg shadow-xl active:scale-[0.98] transition md:px-4">
+          <Link
+            href={
+              currentInventaireId
+                ? `/resume?inventaireId=${currentInventaireId}`
+                : "#"
+            }
+            className={`w-100 bg-indigo-600 text-white py-2 px-2 rounded-xl font-semibold text-lg shadow-xl active:scale-[0.98] transition md:px-4 text-center ${
+              !currentInventaireId ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            onClick={(e) => {
+              if (!currentInventaireId) {
+                e.preventDefault();
+                toast.info("Inventaire non démarré");
+              }
+            }}
+          >
             Résumé
-          </button>
+          </Link>
         </div>
       </div>
 
