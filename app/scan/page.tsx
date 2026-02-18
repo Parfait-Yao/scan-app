@@ -154,7 +154,7 @@ function ScanContent() {
           try {
             // Appel unique à leur API
             const response = await axios.get(
-              `${process.env.EXTERNAL_API_BASE}/product-serialize/${code}`,
+              `${process.env.NEXT_PUBLIC_EXTERNAL_API_BASE}/product-serialize/${code}`,
             );
 
             const produit = response.data;
@@ -197,10 +197,10 @@ function ScanContent() {
             );
           } catch (err: any) {
             if (err.response?.status === 404) {
-              toast.error("IMEI inconnu dans leur base", { autoClose: 2000 });
+              toast.error("IMEI inconnu dans la base", { autoClose: 1000 });
             } else {
               toast.error("Erreur lors de la vérification", {
-                autoClose: 2000,
+                autoClose: 1000,
               });
             }
             console.error("Erreur API externe:", err);
