@@ -152,54 +152,59 @@ function ScanContent() {
           code = code.replace(/[^0-9]/g, "");
 
           try {
-  // Appel unique à leur API
-  const response = await axios.get(
-    `${process.env.EXTERNAL_API_BASE}/product-serialize/${code}`
-  );
+            // Appel unique à leur API
+            const response = await axios.get(
+              `${process.env.EXTERNAL_API_BASE}/product-serialize/${code}`,
+            );
 
-  const produit = response.data;
+            const produit = response.data;
 
-  if (!produit || !produit.imei) {
-    toast.error("IMEI non trouvé dans leur système", { autoClose: 2000 });
-    return;
-  }
+            if (!produit || !produit.imei) {
+              toast.error("IMEI non trouvé dans leur système", {
+                autoClose: 2000,
+              });
+              return;
+            }
 
-  // Envoie au back : IMEI + inventaireId + l'objet produit complet
-  const saveRes = await fetch("/api/scan", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      imei: code,
-      inventaireId: currentInventaireId,
-      produit, // ← on envoie tout l'objet reçu
-    }),
-  });
+            // Envoie au back : IMEI + inventaireId + l'objet produit complet
+            const saveRes = await fetch("/api/scan", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                imei: code,
+                inventaireId: currentInventaireId,
+                produit, // ← on envoie tout l'objet reçu
+              }),
+            });
 
-  const json = await saveRes.json();
+            const json = await saveRes.json();
 
-  if (!saveRes.ok || json.error) {
-    toast.error(json.error || "Erreur ajout (déjà scanné ?)", { autoClose: 2000 });
-    return;
-  }
+            if (!saveRes.ok || json.error) {
+              toast.error(json.error || "Erreur ajout (déjà scanné ?)", {
+                autoClose: 2000,
+              });
+              return;
+            }
 
-  // Succès
-  setScannedCount((prev) => prev + 1);
-  playSuccessBeep();
-  if (navigator.vibrate) navigator.vibrate(150);
+            // Succès
+            setScannedCount((prev) => prev + 1);
+            playSuccessBeep();
+            if (navigator.vibrate) navigator.vibrate(150);
 
-  toast.success(
-    `+1 (${produit.brand || ''} ${produit.model || ''} ${produit.capacity || ''} - Grade ${produit.revvoGrade || 'N/A'})`,
-    { autoClose: 800 }
-  );
-
-} catch (err: any) {
-  if (err.response?.status === 404) {
-    toast.error("IMEI inconnu dans leur base", { autoClose: 2000 });
-  } else {
-    toast.error("Erreur lors de la vérification", { autoClose: 2000 });
-  }
-  console.error("Erreur API externe:", err);
-}
+            toast.success(
+              `+1 (${produit.brand || ""} ${produit.model || ""} ${produit.capacity || ""} - Grade ${produit.revvoGrade || "N/A"})`,
+              { autoClose: 800 },
+            );
+          } catch (err: any) {
+            if (err.response?.status === 404) {
+              toast.error("IMEI inconnu dans leur base", { autoClose: 2000 });
+            } else {
+              toast.error("Erreur lors de la vérification", {
+                autoClose: 2000,
+              });
+            }
+            console.error("Erreur API externe:", err);
+          }
 
           // Re-démarre le scanner (inchangé)
           setTimeout(() => {
