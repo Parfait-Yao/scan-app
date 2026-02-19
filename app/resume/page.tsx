@@ -254,10 +254,10 @@ function ResumeContent() {
 };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
-      <header className="sticky top-0 z-10 dark:bg-black/80 backdrop-blur-lg rounded-2xl py-4 border-b border-gray-200/50 dark:border-gray-700/50 mb-10">
+    <div className="min-h-screen ">
+      <header className="sticky top-0 z-10 rounded-2xl py-2 mb-5">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
-          <h1 className="text-3xl font-bold text-center mb-6">
+          <h1 className="text-2xl font-bold text-center mb-6">
             Résumé Inventaire {inventaireId ? `#${inventaireId}` : ''}
           </h1>
 

@@ -8,7 +8,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaClipboardList, FaBarcode, FaCalendarAlt } from 'react-icons/fa';
 import { BsUpcScan } from "react-icons/bs";
-import { Moon, Sun } from 'lucide-react';
+import { Button } from "@/components/ui/button"
 
 // Import des composants shadcn Table
 import {
@@ -163,7 +163,7 @@ export default function InventairesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white ">
+    <div className="min-h-screen ">
       <ToastContainer theme={theme} position="top-center" />
 
       <header className="sticky top-0 z-10 bg-white dark:bg-black/80 backdrop-blur-lg   py-4 mb-8">

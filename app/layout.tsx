@@ -5,8 +5,10 @@ import "./globals.css";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { ThemeProvider } from "@/components/theme-provider"; // garde si tu l'as
-import { TopNavbar } from "@/components/top-navbar";        // garde si tu l'as
+import { ThemeProvider } from "@/components/theme-provider"; 
+import { TopNavbar } from "@/components/top-navbar";        
+import { Toaster } from "@/components/ui/sonner"
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -60,6 +62,7 @@ export default function RootLayout({
               <main className="flex-1 overflow-auto bg-background p-4 md:p-6">
                 {children}
               </main>
+              <Toaster />
             </div>
           </SidebarProvider>
         </ThemeProvider>

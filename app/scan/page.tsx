@@ -5,10 +5,10 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Quagga from "@ericblade/quagga2";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "sonner"
 import axios from "axios";
 import Link from "next/link";
+import { Button } from "@/components/ui/button"
 
 // Composant interne qui contient toute la logique (protégé par Suspense)
 function ScanContent() {
@@ -74,7 +74,8 @@ const [hasScans, setHasScans] = useState(false);
         const data = await res.json();
         if (data.id) {
           setCurrentInventaireId(data.id);
-          toast.info(`Inventaire #${data.id} démarré`, { autoClose: 1800 });
+          toast(`Inventaire #${data.id} démarré`,{ position: "top-center" });
+          // toast.info(`Inventaire #${data.id} démarré`, { autoClose: 1800 });
         }
       } catch {
         setError("Impossible de démarrer un inventaire");
@@ -180,9 +181,10 @@ const [hasScans, setHasScans] = useState(false);
             const produit = response.data;
 
             if (!produit || !produit.imei) {
-              toast.error("IMEI non trouvé dans leur système", {
-                autoClose: 2000,
-              });
+              toast.error("IMEI non trouvé dans leur système",{ position: "top-center" });
+              // toast.error("IMEI non trouvé dans leur système", {
+              //   autoClose: 2000,
+              // });
               return;
             }
 
@@ -200,9 +202,10 @@ const [hasScans, setHasScans] = useState(false);
             const json = await saveRes.json();
 
             if (!saveRes.ok || json.error) {
-              toast.error(json.error || "Erreur ajout (déjà scanné ?)", {
-                autoClose: 2000,
-              });
+              toast.warning(json.error || "Erreur ajout (déjà scanné ?)",{ position: "top-center" })
+              // toast.error(json.error || "Erreur ajout (déjà scanné ?)", {
+              //   autoClose: 2000,
+              // });
               return;
             }
 
@@ -211,18 +214,17 @@ const [hasScans, setHasScans] = useState(false);
             setHasScans(true);               // ← ajoute cette ligne
             playSuccessBeep();
             if (navigator.vibrate) navigator.vibrate(150);
-
-            toast.success(
-              `+1 (${produit.brand || ""} ${produit.model || ""} ${produit.capacity || ""} - Grade ${produit.revvoGrade || "N/A"})`,
-              { autoClose: 800 },
-            );
+            toast.success(`+1 (${produit.brand || ""} ${produit.model || ""} ${produit.capacity || ""} - Grade ${produit.revvoGrade || "N/A"})`,{ position: "top-center" })
+            // toast.success(
+            //   `+1 (${produit.brand || ""} ${produit.model || ""} ${produit.capacity || ""} - Grade ${produit.revvoGrade || "N/A"})`,
+            //   { autoClose: 800 },
+            // );
           } catch (err: any) {
             if (err.response?.status === 404) {
-              toast.error("IMEI inconnu dans la base", { autoClose: 1000 });
+              
+              toast.error("IMEI inconnu dans la base",{ position: "top-center" });
             } else {
-              toast.error("Erreur lors de la vérification", {
-                autoClose: 1000,
-              });
+              toast.error("Erreur lors de la vérification",{ position: "top-center" });
             }
             console.error("Erreur API externe:", err);
           }
@@ -294,12 +296,12 @@ const [hasScans, setHasScans] = useState(false);
 
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden items-center justify-center">
-      <ToastContainer
+      {/* <ToastContainer
         theme="colored"
         position="top-center"
         autoClose={800}
         hideProgressBar
-      />
+      /> */}
 
       {/* Compteur fixe en haut – gardé tel quel */}
       <div className="fixed top-3 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
@@ -346,7 +348,7 @@ const [hasScans, setHasScans] = useState(false);
       </div>
 
       {/* Boutons fixes en bas – gardés tels quels */}
-      <div className="w-1/3 mx-auto mb-20 z-50 bg-linear-to-t from-black/40 to-transparent px-5 flex justify-center items-center  ">
+      <div className="w-1/3 mx-auto mb-20 z-50  px-5 flex justify-center items-center  ">
         <div className="flex justify-center items-center max-w-md mx-auto flex-wrap">
           <Link
           href={
@@ -354,7 +356,7 @@ const [hasScans, setHasScans] = useState(false);
               ? `/resume?inventaireId=${currentInventaireId}`
               : "#"
           }
-          className={`w-full py-3 px-6 rounded-xl font-semibold text-lg shadow-xl transition text-center md:px-8 ${
+          className={`w-85 mx-auto px-3 py-2 lg:py-3 lg:px-6  rounded-xl font-semibold text-lg shadow-xl transition text-center md:px-8 ${
             !currentInventaireId || !hasScans
               ? "opacity-50 cursor-not-allowed bg-indigo-400 text-white/70"
               : "bg-indigo-600 text-white active:scale-95"
@@ -362,16 +364,13 @@ const [hasScans, setHasScans] = useState(false);
           onClick={(e) => {
             if (!currentInventaireId) {
               e.preventDefault();
-              toast.info("Inventaire non démarré");
+              toast.info("Inventaire non démarré",{ position: "top-center" });
               return;
             }
 
             if (!hasScans) {
               e.preventDefault();
-              toast.warn("Veuillez scanner au moins un appareil pour voir le résumé", {
-                autoClose: 4000,
-                position: "top-center",
-              });
+              toast.warning("Veuillez scanner au moins un appareil pour voir le résumé",{ position: "top-center" });
               return;
             }
 
