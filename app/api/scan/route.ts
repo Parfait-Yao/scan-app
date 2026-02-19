@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/scan/route.ts
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
@@ -7,8 +8,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { imei, inventaireId, produit } = body;
 
-    if (!imei || !inventaireId || !produit) {
-      return NextResponse.json({ error: 'Données incomplètes' }, { status: 400 });
+    if (!imei?.trim() || !inventaireId || !produit) {
+      return NextResponse.json({ error: 'Données incomplètes (IMEI, inventaireId ou produit manquant)' }, { status: 400 });
     }
 
     const id = Number(inventaireId);
@@ -16,28 +17,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'ID inventaire invalide' }, { status: 400 });
     }
 
-    // Vérifie doublon dans cet inventaire
-    const exist = await prisma.inventaireItem.findFirst({
+    // Vérifie si déjà scanné DANS CET INVENTAIRE
+    const existing = await prisma.inventaireItem.findFirst({
       where: {
-        imei,
+        imei: imei.trim(),
         inventaireId: id,
       },
     });
 
-    if (exist) {
-      return NextResponse.json({ error: 'Appareil déjà scanné dans cet inventaire' }, { status: 409 });
+    if (existing) {
+      return NextResponse.json(
+        { error: 'Cet IMEI a déjà été scanné dans cet inventaire' },
+        { status: 409 }
+      );
     }
 
-    // Enregistre avec les vraies infos reçues du front
-    await prisma.inventaireItem.create({
+    // Création avec nettoyage des données
+    const newScan = await prisma.inventaireItem.create({
       data: {
-        imei,
-        brand: produit.brand || 'Inconnu',
-        model: produit.model || 'Inconnu',
-        capacity: produit.capacity || 'Inconnu',
-        color: produit.color || 'Inconnu',
-        revvoGrade: produit.revvoGrade || 'N/A',
-        status: produit.status || 'N/A',
+        imei: imei.trim(),
+        brand: produit.brand?.trim() || 'Inconnu',
+        model: produit.model?.trim() || 'Inconnu',
+        capacity: produit.capacity?.trim() || 'Inconnu',
+        color: produit.color?.trim() || 'Inconnu',
+        revvoGrade: produit.revvoGrade?.trim() || 'N/A',
+        status: produit.status?.trim() || 'Disponible',
         inventaireId: id,
         quantite: 1,
       },
@@ -45,11 +49,20 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      produit,
-      message: `+1 (${produit.brand || 'Produit'} ${produit.model || ''})`,
-    });
-  } catch (error) {
+      scan: newScan,
+      message: `+1 (${produit.brand || 'Produit'} ${produit.model || imei})`,
+    }, { status: 201 });
+  } catch (error: any) {
     console.error('Erreur scan:', error);
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+
+    // Gestion spécifique des erreurs Prisma (contrainte unique)
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Cet IMEI a déjà été scanné dans cet inventaire (contrainte base)' },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json({ error: 'Erreur serveur lors du scan' }, { status: 500 });
   }
 }

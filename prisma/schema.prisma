@@ -16,17 +16,20 @@ model Inventaire {
 }
 
 model InventaireItem {
-  id           Int        @id @default(autoincrement())
-  imei         String     @unique
-  brand        String
-  model        String
-  status       String
-  capacity     String
-  color        String
-  revvoGrade   String
+  id           Int      @id @default(autoincrement())
+  imei         String
+  brand        String?
+  model        String?
+  status       String?
+  capacity     String?
+  color        String?
+  revvoGrade   String?
   inventaireId Int
-  quantite       Int        @default(1)
+  quantite     Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
   inventaire   Inventaire @relation(fields: [inventaireId], references: [id])
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+
+  @@unique([imei, inventaireId])   // ← OBLIGATOIRE pour autoriser le même IMEI ailleurs
 }
