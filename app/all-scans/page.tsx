@@ -31,7 +31,7 @@ import { Input } from '@/components/ui/input';
 // Typage
 interface ScanFull {
   imei: string;
-  marque: string;          // ← AJOUTÉ : marque (brand)
+  brand: string;          // ← AJOUTÉ : marque (brand)
   model: string;
   capacity: string;
   color: string;
@@ -90,7 +90,7 @@ export default function AllScansPage() {
 
     const data = scans.map(s => ({
       IMEI: s.imei,
-      Marque: s.marque || '',
+      Marque: s.brand || '',
       Modèle: s.model || '',
       Capacité: s.capacity || '',
       Couleur: s.color || '',
@@ -224,7 +224,7 @@ export default function AllScansPage() {
                   scans.map((scan, index) => (
                     <TableRow key={index} className="hover:bg-muted/30 transition-all duration-200">
                       <TableCell className="font-medium">{scan.imei}</TableCell>
-                      <TableCell>{scan.marque || 'N/A'}</TableCell> {/* ← AJOUTÉ */}
+                      <TableCell>{scan.brand || 'N/A'}</TableCell> {/* ← AJOUTÉ */}
                       <TableCell>{scan.model}</TableCell>
                       <TableCell>{scan.capacity}</TableCell>
                       <TableCell>{scan.color}</TableCell>
