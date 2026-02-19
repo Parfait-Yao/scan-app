@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { FaClipboardList, FaBarcode, FaCalendarAlt } from 'react-icons/fa';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { FaClipboardList, FaBarcode, FaCalendarAlt } from "react-icons/fa";
 import { BsUpcScan } from "react-icons/bs";
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 
 // Import des composants shadcn Table
 import {
@@ -34,34 +34,34 @@ export default function InventairesPage() {
   const router = useRouter();
 
   // État pour le thème (light ou dark)
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
 
   // Charger le thème depuis localStorage ou préférence système
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
     if (savedTheme) {
       setTheme(savedTheme);
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      setTheme("dark");
     } else {
-      setTheme('light');
+      setTheme("light");
     }
   }, []);
 
   // Appliquer le thème au document
   useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
     } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
     }
   }, [theme]);
 
   // Toggle du thème
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
   // Charger la liste des inventaires avec debug
@@ -70,9 +70,9 @@ export default function InventairesPage() {
     setError(null);
 
     try {
-      console.log('Chargement des inventaires...');
-      const res = await fetch('/api/inventaire');
-      console.log('Statut réponse:', res.status);
+      console.log("Chargement des inventaires...");
+      const res = await fetch("/api/inventaire");
+      console.log("Statut réponse:", res.status);
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -80,7 +80,7 @@ export default function InventairesPage() {
       }
 
       const json = await res.json();
-      console.log('Réponse JSON complète:', json);
+      // console.log('Réponse JSON complète:', json);
 
       if (json.error) {
         throw new Error(json.error);
@@ -89,15 +89,15 @@ export default function InventairesPage() {
       // Vérification que la clé existe
       const invList = json.inventaires || json.data || [];
       if (!Array.isArray(invList)) {
-        throw new Error('Format inattendu : inventaires n’est pas un tableau');
+        throw new Error("Format inattendu : inventaires n’est pas un tableau");
       }
 
       setInventaires(invList);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erreur inconnue';
-      console.error('Erreur complète lors du chargement:', err);
-      setError(message || 'Impossible de charger les inventaires');
-      toast.error(message || 'Erreur lors du chargement des inventaires');
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      console.error("Erreur complète lors du chargement:", err);
+      setError(message || "Impossible de charger les inventaires");
+      toast.error(message || "Erreur lors du chargement des inventaires");
     } finally {
       setLoading(false);
     }
@@ -110,13 +110,15 @@ export default function InventairesPage() {
   // Créer un nouvel inventaire et rediriger
   const createNewInventaire = async () => {
     try {
-      const res = await fetch('/api/inventaire', { method: 'POST' });
+      const res = await fetch("/api/inventaire", { method: "POST" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const json = await res.json();
       if (json.error) throw new Error(json.error);
 
-      toast.success(json.message || `Nouvel inventaire #${json.id} créé !`, { autoClose: 2000 });
+      toast.success(json.message || `Nouvel inventaire #${json.id} créé !`, {
+        autoClose: 2000,
+      });
 
       // Rafraîchir la liste
       await loadInventaires();
@@ -124,14 +126,17 @@ export default function InventairesPage() {
       // Rediriger vers scanner avec le nouvel ID
       router.push(`/scan?inventaireId=${json.id}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erreur inconnue';
-      toast.error(message || 'Erreur lors de la création de l’inventaire');
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      toast.error(message || "Erreur lors de la création de l’inventaire");
     }
   };
 
   // Stats des cards
   const totalInventaires = inventaires.length;
-  const totalScans = inventaires.reduce((sum, inv) => sum + (inv.nbScans || 0), 0);
+  const totalScans = inventaires.reduce(
+    (sum, inv) => sum + (inv.nbScans || 0),
+    0,
+  );
   const dernierInventaire = inventaires[0] || null; // Le plus récent en premier
 
   if (loading) {
@@ -171,7 +176,6 @@ export default function InventairesPage() {
           <h1 className="text-2xl sm:text-3xl font-bold bg-linear-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent text-center">
             Dashboard Inventaires
           </h1>
-          
         </div>
       </header>
 
@@ -182,8 +186,12 @@ export default function InventairesPage() {
             <FaClipboardList className="text-emerald-400 text-2xl" />
           </div>
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total Inventaires</p>
-            <p className="text-2xl font-bold text-emerald-400">{totalInventaires}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Total Inventaires
+            </p>
+            <p className="text-2xl font-bold text-emerald-400">
+              {totalInventaires}
+            </p>
           </div>
         </div>
 
@@ -192,7 +200,9 @@ export default function InventairesPage() {
             <FaBarcode className="text-blue-400 text-2xl" />
           </div>
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total Scans</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Total Scans
+            </p>
             <p className="text-2xl font-bold text-blue-400">{totalScans}</p>
           </div>
         </div>
@@ -202,13 +212,20 @@ export default function InventairesPage() {
             <FaCalendarAlt className="text-purple-400 text-4xl" />
           </div>
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Dernier Inventaire</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Dernier Inventaire
+            </p>
             {dernierInventaire ? (
               <div>
                 <p className="text-md font-bold text-purple-400">
-                  #{dernierInventaire.id} - {new Date(dernierInventaire.createdAt).toLocaleDateString('fr-FR')}
+                  #{dernierInventaire.id} -{" "}
+                  {new Date(dernierInventaire.createdAt).toLocaleDateString(
+                    "fr-FR",
+                  )}
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-300">{dernierInventaire.nbScans} scans</p>
+                <p className="text-sm text-gray-500 dark:text-gray-300">
+                  {dernierInventaire.nbScans} scans
+                </p>
               </div>
             ) : (
               <p className="text-xl font-bold text-purple-400">Aucun</p>
@@ -224,21 +241,32 @@ export default function InventairesPage() {
             onClick={createNewInventaire}
             className="flex justify-center items-center bg-linear-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 px-6 py-2 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 text-white"
           >
-            <BsUpcScan className="mr-2" />Créer un nouvel inventaire
+            <BsUpcScan className="mr-2" />
+            Créer un nouvel inventaire
           </button>
         </div>
 
         {inventaires.length === 0 ? (
-          <p className="text-center text-gray-600 dark:text-gray-400 text-xl">Aucun inventaire disponible</p>
+          <p className="text-center text-gray-600 dark:text-gray-400 text-xl">
+            Aucun inventaire disponible
+          </p>
         ) : (
           <div className="w-full overflow-x-auto rounded-sm border border-gray-300 dark:border-gray-700 shadow-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm">
             <Table>
               <TableHeader className="bg-gray-200/90 dark:bg-gray-800/90 sticky top-0">
                 <TableRow>
-                  <TableHead className="p-4 text-left font-semibold text-black dark:text-white">ID</TableHead>
-                  <TableHead className="p-4 text-left font-semibold text-black dark:text-white">Date création</TableHead>
-                  <TableHead className="p-4 text-center font-semibold text-black dark:text-white">Nb scans</TableHead>
-                  <TableHead className="p-4 text-center font-semibold text-black dark:text-white">Actions</TableHead>
+                  <TableHead className="p-4 text-left font-semibold text-black dark:text-white">
+                    ID
+                  </TableHead>
+                  <TableHead className="p-4 text-left font-semibold text-black dark:text-white">
+                    Date création
+                  </TableHead>
+                  <TableHead className="p-4 text-center font-semibold text-black dark:text-white">
+                    Nb scans
+                  </TableHead>
+                  <TableHead className="p-4 text-center font-semibold text-black dark:text-white">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -248,30 +276,28 @@ export default function InventairesPage() {
                     key={inv.id}
                     className="border-b border-gray-300 dark:border-gray-800 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition"
                   >
-                    <TableCell className="p-4 font-semibold text-black dark:text-white"># {inv.id}</TableCell>
+                    <TableCell className="p-4 font-semibold text-black dark:text-white">
+                      # {inv.id}
+                    </TableCell>
                     <TableCell className="p-4 text-black dark:text-white">
-                      {new Date(inv.createdAt).toLocaleDateString('fr-FR', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
+                      {new Date(inv.createdAt).toLocaleDateString("fr-FR", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
                       })}
                     </TableCell>
                     <TableCell className="p-4 text-center font-bold text-emerald-400">
                       {inv.nbScans}
                     </TableCell>
                     <TableCell className="p-4 text-center flex justify-center gap-4">
-                      <Link
-                        href={`/resume?inventaireId=${inv.id}`}
-                        className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl font-semibold shadow-lg transition text-sm text-white"
-                      >
-                        Voir détails
+                      <Link href={`/resume?inventaireId=${inv.id}`}>
+                        <Button>Voir détails</Button>
                       </Link>
+
                       <Link
-                        href={`/scan?inventaireId=${inv.id}`}
-                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl font-semibold shadow-lg transition text-sm text-white"
-                      >
-                        Scanner
+                        href={`/scan?inventaireId=${inv.id}`} >
+                        <Button className="bg-green-600 hover:bg-green-700 px-4 py-2  font-semibold shadow-lg transition text-sm text-white">Scanner</Button>
                       </Link>
                     </TableCell>
                   </TableRow>

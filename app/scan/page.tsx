@@ -350,12 +350,12 @@ const [hasScans, setHasScans] = useState(false);
       {/* Boutons fixes en bas – gardés tels quels */}
       <div className="w-1/3 mx-auto mb-20 z-50  px-5 flex justify-center items-center  ">
         <div className="flex justify-center items-center max-w-md mx-auto flex-wrap">
-          <Link
-          href={
+          <Link href={
             currentInventaireId && hasScans
               ? `/resume?inventaireId=${currentInventaireId}`
               : "#"
-          }
+          }>
+            <Button
           className={`w-85 mx-auto px-3 py-2 lg:py-3 lg:px-6  rounded-xl font-semibold text-lg shadow-xl transition text-center md:px-8 ${
             !currentInventaireId || !hasScans
               ? "opacity-50 cursor-not-allowed bg-indigo-400 text-white/70"
@@ -378,7 +378,9 @@ const [hasScans, setHasScans] = useState(false);
           }}
         >
           Résumé
-        </Link>
+        </Button>
+          </Link>
+          
         </div>
       </div>
 

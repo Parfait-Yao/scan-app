@@ -10,6 +10,7 @@ import { FaTableCells } from "react-icons/fa6";
 import { BsUpcScan } from "react-icons/bs";
 import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
+import { Button } from "@/components/ui/button";
 
 // shadcn imports
 import {
@@ -94,9 +95,12 @@ function ResumeContent() {
         <div className="text-center max-w-md">
           <h1 className="text-5xl font-bold text-red-500 mb-6">Oups !</h1>
           <p className="text-2xl mb-8">{error || 'Aucun appareil scanné'}</p>
-          <Link href="/scan" className="bg-emerald-600 px-10 py-5 rounded-xl text-white font-bold">
+          <Link href="/scan" >
+          <Button className="bg-emerald-600 px-10 py-5 rounded-xl text-white font-bold">
             Retour au scanner
+          </Button>
           </Link>
+          
         </div>
       </div>
     );
@@ -360,23 +364,26 @@ function ResumeContent() {
 
         {/* Boutons */}
         <div className="mt-12 flex flex-wrap justify-center gap-4">
-          <Link
-            href={`/scan?inventaireId=${inventaireId}`}
+          <Link href={`/scan?inventaireId=${inventaireId}`}>
+          <Button
             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 px-2 py-2 lg:px-6 lg:py-3 rounded-xl text-white font-bold shadow-lg"
           >
             <BsUpcScan /> Continuer à scanner
+          </Button>
           </Link>
-
-          <Link
-            href="/"
+          
+          <Link  href="/">
+            <Button
             className="flex items-center gap-2 bg-red-700 hover:bg-red-800 px-2 py-2 lg:px-6 lg:py-3 rounded-xl text-white font-bold shadow-lg"
           >
             <FaTableCells /> Voir les inventaires
+          </Button>
           </Link>
+          
 
           {produits.length > 0 && (
             <>
-              <button
+              <Button
                 onClick={downloadPDF}
                 className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 px-2 py-2 lg:px-6 lg:py-3 rounded-xl text-white font-bold shadow-lg"
               >
@@ -384,15 +391,15 @@ function ResumeContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Télécharger PDF
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={downloadExcel}
                 className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 px-2 py-2 lg:px-6 lg:py-3 rounded-xl text-white font-bold shadow-lg"
               >
                 <FaTableCells className="w-5 h-5" />
                 Télécharger Excel
-              </button>
+              </Button>
             </>
           )}
         </div>
