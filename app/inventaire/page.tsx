@@ -163,10 +163,10 @@ export default function InventairesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-gray-100 via-gray-200 to-white dark:from-gray-950 dark:via-gray-900 dark:to-black text-black dark:text-white px-10 py-8">
+    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white ">
       <ToastContainer theme={theme} position="top-center" />
 
-      <header className="sticky top-0 z-10 bg-white/80 dark:bg-black/80 backdrop-blur-lg border-b border-gray-200/50 dark:border-gray-800/50 py-4 mb-8">
+      <header className="sticky top-0 z-10 bg-white dark:bg-black/80 backdrop-blur-lg   py-4 mb-8">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 flex justify-center items-center">
           <h1 className="text-2xl sm:text-3xl font-bold bg-linear-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent text-center">
             Dashboard Inventaires
@@ -179,21 +179,21 @@ export default function InventairesPage() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
         <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md p-6 rounded-2xl border border-emerald-500/30 shadow-xl flex items-center gap-5">
           <div className="bg-emerald-500/20 p-4 rounded-xl">
-            <FaClipboardList className="text-emerald-400 text-4xl" />
+            <FaClipboardList className="text-emerald-400 text-2xl" />
           </div>
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400">Total Inventaires</p>
-            <p className="text-4xl font-bold text-emerald-400">{totalInventaires}</p>
+            <p className="text-2xl font-bold text-emerald-400">{totalInventaires}</p>
           </div>
         </div>
 
         <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md p-6 rounded-2xl border border-blue-500/30 shadow-xl flex items-center gap-5">
           <div className="bg-blue-500/20 p-4 rounded-xl">
-            <FaBarcode className="text-blue-400 text-4xl" />
+            <FaBarcode className="text-blue-400 text-2xl" />
           </div>
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400">Total Scans</p>
-            <p className="text-4xl font-bold text-blue-400">{totalScans}</p>
+            <p className="text-2xl font-bold text-blue-400">{totalScans}</p>
           </div>
         </div>
 
@@ -205,7 +205,7 @@ export default function InventairesPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">Dernier Inventaire</p>
             {dernierInventaire ? (
               <div>
-                <p className="text-xl font-bold text-purple-400">
+                <p className="text-md font-bold text-purple-400">
                   #{dernierInventaire.id} - {new Date(dernierInventaire.createdAt).toLocaleDateString('fr-FR')}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-300">{dernierInventaire.nbScans} scans</p>

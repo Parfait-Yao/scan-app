@@ -254,9 +254,9 @@ function ResumeContent() {
 };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-white dark:from-gray-950 dark:to-black text-black dark:text-white">
+    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
       <header className="sticky top-0 z-10 dark:bg-black/80 backdrop-blur-lg rounded-2xl py-4 border-b border-gray-200/50 dark:border-gray-700/50 mb-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
           <h1 className="text-3xl font-bold text-center mb-6">
             Résumé Inventaire {inventaireId ? `#${inventaireId}` : ''}
           </h1>
@@ -265,7 +265,7 @@ function ResumeContent() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             {['A+', 'A', 'B', 'C', 'D'].map(grade => (
               <Card key={grade} className="shadow-xl">
-                <CardHeader className="p-2">
+                <CardHeader >
                   <CardTitle className="text-md text-center">{grade}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-center">
@@ -283,7 +283,7 @@ function ResumeContent() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-8">
         {produits.length === 0 ? (
           <p className="text-center text-xl text-gray-600 dark:text-gray-400">
             Aucun appareil scanné dans cet inventaire
@@ -362,14 +362,14 @@ function ResumeContent() {
         <div className="mt-12 flex flex-wrap justify-center gap-4">
           <Link
             href={`/scan?inventaireId=${inventaireId}`}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 px-6 py-3 rounded-xl text-white font-bold shadow-lg"
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 px-2 py-2 lg:px-6 lg:py-3 rounded-xl text-white font-bold shadow-lg"
           >
             <BsUpcScan /> Continuer à scanner
           </Link>
 
           <Link
             href="/"
-            className="flex items-center gap-2 bg-red-700 hover:bg-red-800 px-6 py-3 rounded-xl text-white font-bold shadow-lg"
+            className="flex items-center gap-2 bg-red-700 hover:bg-red-800 px-2 py-2 lg:px-6 lg:py-3 rounded-xl text-white font-bold shadow-lg"
           >
             <FaTableCells /> Voir les inventaires
           </Link>
@@ -378,7 +378,7 @@ function ResumeContent() {
             <>
               <button
                 onClick={downloadPDF}
-                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-xl text-white font-bold shadow-lg"
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 px-2 py-2 lg:px-6 lg:py-3 rounded-xl text-white font-bold shadow-lg"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -388,7 +388,7 @@ function ResumeContent() {
 
               <button
                 onClick={downloadExcel}
-                className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 px-6 py-3 rounded-xl text-white font-bold shadow-lg"
+                className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 px-2 py-2 lg:px-6 lg:py-3 rounded-xl text-white font-bold shadow-lg"
               >
                 <FaTableCells className="w-5 h-5" />
                 Télécharger Excel

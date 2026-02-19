@@ -37,7 +37,7 @@ export function TopNavbar() {
     >
       <div className="flex h-14 items-center gap-4 px-4 md:px-6">
         {/* Trigger sidebar (mobile ou collapsé) */}
-        <SidebarTrigger className="-ml-2 md:hidden" />
+        {/* <SidebarTrigger className="-ml-2 md:hidden" /> */}
 
         
 
@@ -61,10 +61,10 @@ export function TopNavbar() {
           </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon">
+          {/* <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
             <span className="sr-only">Notifications</span>
-          </Button>
+          </Button> */}
 
           {/* Avatar + Dropdown utilisateur */}
           <DropdownMenu>

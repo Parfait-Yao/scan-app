@@ -45,9 +45,9 @@ import {
 
 // Données de navigation
 const navItems = [
-  { title: "Accueil", url: "/dashboard", icon: Home },
+  // { title: "Accueil", url: "/dashboard", icon: Home },
   { title: "Inventaires", url: "/", icon:  List },
-  { title: "Historique", url: "/all-scans", icon: History },
+  // { title: "Historique", url: "/all-scans", icon: History },
 ];
 
 const moreItems = [
@@ -78,7 +78,7 @@ export function AppSidebar() {
                       Projet Scanner
                     </span>
                   </div>
-                  <ChevronDown className="h-4 w-4 opacity-70 shrink-0" />
+                  
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
 {/* 
@@ -130,14 +130,14 @@ export function AppSidebar() {
         {/* Section "Plus" repliable */}
         <Collapsible defaultOpen className="group/collapsible">
           <SidebarGroup>
-            <SidebarGroupLabel asChild>
+            {/* <SidebarGroupLabel asChild>
               <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-1.5">
                 Plus
                 <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
               </CollapsibleTrigger>
-            </SidebarGroupLabel>
+            </SidebarGroupLabel> */}
 
-            <CollapsibleContent>
+            {/* <CollapsibleContent>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {moreItems.map((item) => (
@@ -152,7 +152,7 @@ export function AppSidebar() {
                   ))}
                 </SidebarMenu>
               </SidebarGroupContent>
-            </CollapsibleContent>
+            </CollapsibleContent> */}
           </SidebarGroup>
         </Collapsible>
       </SidebarContent>
@@ -163,7 +163,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Profil">
               <User2 className="h-5 w-5" />
-              <span>Parfait Eric</span>
+              <span>Revvo</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

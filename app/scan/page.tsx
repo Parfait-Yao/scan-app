@@ -14,6 +14,8 @@ import Link from "next/link";
 function ScanContent() {
   const searchParams = useSearchParams();
   const inventaireIdFromUrl = searchParams.get("inventaireId");
+  // Ajoute cette ligne avec les autres states
+const [hasScans, setHasScans] = useState(false);
 
   const [scannedCount, setScannedCount] = useState(0);
   const [currentInventaireId, setCurrentInventaireId] = useState<number | null>(
@@ -24,6 +26,23 @@ function ScanContent() {
   const router = useRouter();
   const isMounted = useRef(true);
   const quaggaInitialized = useRef(false);
+
+
+    useEffect(() => {
+  if (!currentInventaireId) return;
+
+  const checkRealCount = async () => {
+    try {
+      const res = await fetch(`/api/inventaire/${currentInventaireId}/count`);
+      if (!res.ok) return;
+      const { count } = await res.json();
+      setScannedCount(count);
+      setHasScans(count > 0);
+    } catch {}
+  };
+
+  checkRealCount();
+}, [currentInventaireId]);
 
   // Son de succès (inchangé)
   const playSuccessBeep = () => {
@@ -189,6 +208,7 @@ function ScanContent() {
 
             // Succès
             setScannedCount((prev) => prev + 1);
+            setHasScans(true);               // ← ajoute cette ligne
             playSuccessBeep();
             if (navigator.vibrate) navigator.vibrate(150);
 
@@ -264,9 +284,13 @@ function ScanContent() {
 
   const restartScanner = () => {
     setScannedCount(0);
+    setHasScans(false);
     setError("");
     setIsScanning(false);
   };
+
+
+
 
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden items-center justify-center">
@@ -302,7 +326,7 @@ function ScanContent() {
       )}
 
       {/* Zone de scan : carrée, très grande, centrée – gardée telle quelle */}
-      <div className="flex-1 flex items-center justify-center w-100 px-4">
+      <div className="flex-1 flex items-center justify-center w-90 px-4">
         <div
           id="scanner-viewport"
           className={`relative w-full max-w-[85vw] aspect-square bg-black rounded-2xl overflow-hidden border-4 ${isScanning ? "border-emerald-500" : "border-gray-700"} shadow-sm shadow-black/60 transition-all duration-300`}
@@ -322,26 +346,40 @@ function ScanContent() {
       </div>
 
       {/* Boutons fixes en bas – gardés tels quels */}
-      <div className="w-1/3 mx-auto mb-20 z-50 bg-linear-to-t from-black/40 to-transparent px-5  flex justify-center items-center  ">
-        <div className="flex justify-center items-center max-w-md mx-auto  flex-wrap">
+      <div className="w-1/3 mx-auto mb-20 z-50 bg-linear-to-t from-black/40 to-transparent px-5 flex justify-center items-center  ">
+        <div className="flex justify-center items-center max-w-md mx-auto flex-wrap">
           <Link
-            href={
-              currentInventaireId
-                ? `/resume?inventaireId=${currentInventaireId}`
-                : "#"
+          href={
+            currentInventaireId && hasScans
+              ? `/resume?inventaireId=${currentInventaireId}`
+              : "#"
+          }
+          className={`w-full py-3 px-6 rounded-xl font-semibold text-lg shadow-xl transition text-center md:px-8 ${
+            !currentInventaireId || !hasScans
+              ? "opacity-50 cursor-not-allowed bg-indigo-400 text-white/70"
+              : "bg-indigo-600 text-white active:scale-95"
+          }`}
+          onClick={(e) => {
+            if (!currentInventaireId) {
+              e.preventDefault();
+              toast.info("Inventaire non démarré");
+              return;
             }
-            className={`w-100 bg-indigo-600 text-white py-2 px-2 rounded-xl font-semibold text-lg shadow-xl active:scale-[0.98] transition md:px-4 text-center ${
-              !currentInventaireId ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-            onClick={(e) => {
-              if (!currentInventaireId) {
-                e.preventDefault();
-                toast.info("Inventaire non démarré");
-              }
-            }}
-          >
-            Résumé
-          </Link>
+
+            if (!hasScans) {
+              e.preventDefault();
+              toast.warn("Veuillez scanner au moins un appareil pour voir le résumé", {
+                autoClose: 4000,
+                position: "top-center",
+              });
+              return;
+            }
+
+            // Si tout est OK → navigation normale
+          }}
+        >
+          Résumé
+        </Link>
         </div>
       </div>
 
