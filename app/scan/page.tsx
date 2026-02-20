@@ -304,8 +304,8 @@ const [hasScans, setHasScans] = useState(false);
       /> */}
 
       {/* Compteur fixe en haut – gardé tel quel */}
-      <div className="fixed top-3 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
-        <div className="bg-black/70 backdrop-blur-md px-5 py-2 rounded-full border border-emerald-500/20 shadow-lg">
+      <div className="fixed top-14 md:top-3 md:left-60 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
+        <div className="bg-indigo-900 backdrop-blur-md px-5 py-2 rounded-full border border-emerald-500/20 shadow-lg">
           <p className="text-sm sm:text-base font-medium text-white/95">
             Appareils scannés :{" "}
             <span className="text-emerald-300 font-semibold">
@@ -328,14 +328,14 @@ const [hasScans, setHasScans] = useState(false);
       )}
 
       {/* Zone de scan : carrée, très grande, centrée – gardée telle quelle */}
-      <div className="flex-1 flex items-center justify-center w-90 px-4">
+      <div className="flex items-center justify-center w-88 px-4 mb-2 md:mb-10">
         <div
           id="scanner-viewport"
           className={`relative w-full max-w-[85vw] aspect-square bg-black rounded-2xl overflow-hidden border-4 ${isScanning ? "border-emerald-500" : "border-gray-700"} shadow-sm shadow-black/60 transition-all duration-300`}
         />
       </div>
 
-      <div className="text-center mb-10">
+      <div className="text-center mb-4 md:mb-10">
         {isScanning ? (
           <p className="text-emerald-400 font-medium text-lg animate-pulse">
             Scanning actif...
