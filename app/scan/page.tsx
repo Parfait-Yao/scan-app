@@ -383,13 +383,13 @@ function ScanContent() {
                 onClick={() => setShowScanPrompt(false)}
                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-3.5 rounded-2xl font-semibold text-base shadow"
               >
-                Non, terminer
+                Non
               </Button>
               <Button
                 onClick={continueScanning}
                 className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-semibold text-base shadow active:scale-95"
               >
-                Oui, scanner à nouveau
+                Oui
               </Button>
             </div>
           </div>
