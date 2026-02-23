@@ -5,10 +5,10 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Quagga from "@ericblade/quagga2";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner"
+import { toast } from "sonner";
 import axios from "axios";
 import Link from "next/link";
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 
 // Composant interne qui contient toute la logique (protégé par Suspense)
 function ScanContent() {
@@ -17,18 +17,28 @@ function ScanContent() {
 
   const [hasScans, setHasScans] = useState(false);
   const [scannedCount, setScannedCount] = useState(0);
+
   const [currentInventaireId, setCurrentInventaireId] = useState<number | null>(
-    inventaireIdFromUrl ? Number(inventaireIdFromUrl) : null,
+    () => {
+      if (inventaireIdFromUrl) return Number(inventaireIdFromUrl);
+      if (typeof window !== "undefined") {
+        const saved = sessionStorage.getItem("currentInventaireId");
+        return saved ? Number(saved) : null;
+      }
+      return null;
+    },
   );
+
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string>("");
   const [showScanPrompt, setShowScanPrompt] = useState(false);
-  const [scannerKey, setScannerKey] = useState(0); // ← AJOUTÉ : force le redémarrage propre
+  const [scannerKey, setScannerKey] = useState(0);
 
   const router = useRouter();
   const isMounted = useRef(true);
   const quaggaInitialized = useRef(false);
 
+  // Recharge le compteur depuis la base à chaque chargement / changement d'inventaire
   useEffect(() => {
     if (!currentInventaireId) return;
 
@@ -39,13 +49,14 @@ function ScanContent() {
         const { count } = await res.json();
         setScannedCount(count);
         setHasScans(count > 0);
-      } catch {}
+      } catch (e) {
+        console.error("Erreur compteur", e);
+      }
     };
 
     checkRealCount();
   }, [currentInventaireId]);
 
-  // Son de succès (inchangé)
   const playSuccessBeep = () => {
     try {
       const ctx = new (
@@ -65,30 +76,32 @@ function ScanContent() {
     } catch {}
   };
 
-  // Si pas d'inventaireId dans l'URL, en créer un nouveau (inchangé)
   useEffect(() => {
     const initInventaire = async () => {
       if (currentInventaireId) return;
-
       try {
         const res = await fetch("/api/inventaire", { method: "POST" });
         const data = await res.json();
+        // APRÈS
         if (data.id) {
           setCurrentInventaireId(data.id);
-          toast(`Inventaire #${data.id} démarré`,{ position: "top-center" });
+          sessionStorage.setItem("currentInventaireId", String(data.id)); // ✅ AJOUT
+          toast(`Inventaire #${data.id} démarré`, { position: "top-center" });
         }
       } catch {
         setError("Impossible de démarrer un inventaire");
       }
     };
-
     initInventaire();
   }, [currentInventaireId]);
 
-  // Fonction pour continuer le scan (redémarrage propre)
+  // Fix du redémarrage : délai + arrêt propre de la caméra
   const continueScanning = () => {
     setShowScanPrompt(false);
-    setScannerKey((prev) => prev + 1); // ← Force la ré-init complète de Quagga
+    setIsScanning(false); // ← important
+    setTimeout(() => {
+      setScannerKey((prev) => prev + 1);
+    }, 180);
   };
 
   useEffect(() => {
@@ -102,7 +115,18 @@ function ScanContent() {
         Quagga.offProcessed();
         quaggaInitialized.current = false;
       }
+
+      // Arrêt forcé de toutes les streams caméra (évite le blocage)
+      document.querySelectorAll("video").forEach((video) => {
+        if (video.srcObject) {
+          (video.srcObject as MediaStream)
+            .getTracks()
+            .forEach((track) => track.stop());
+        }
+      });
     };
+
+    isMounted.current = true;
 
     const initAndStartScanner = async () => {
       setError("");
@@ -170,24 +194,24 @@ function ScanContent() {
 
         quaggaInitialized.current = true;
         Quagga.start();
-        setIsScanning(true);
+        setIsScanning(true); // ← bordure verte + "Scanning actif..."
 
         Quagga.onDetected(async (data) => {
           let code = data?.codeResult?.code?.trim();
           if (!code) return;
-
           code = code.replace(/[^0-9]/g, "");
 
           try {
             const response = await axios.get(
               `${process.env.NEXT_PUBLIC_EXTERNAL_API_BASE}/product-serialize/${code}`,
             );
-
             const produit = response.data;
 
             if (!produit || !produit.imei) {
               toast.dismiss();
-              toast.error("IMEI non trouvé dans leur système",{ position: "top-center" });
+              toast.error("IMEI non trouvé dans leur système", {
+                position: "top-center",
+              });
               return;
             }
 
@@ -204,19 +228,22 @@ function ScanContent() {
             const json = await saveRes.json();
 
             if (!saveRes.ok || json.error) {
-              // === DÉJÀ SCANNÉ ===
               toast.dismiss();
-              if (navigator.vibrate) navigator.vibrate(500); // vibration renforcée
-              toast.warning(json.error || "Cet IMEI a déjà été scanné",{ position: "top-center" });
+              if (navigator.vibrate) navigator.vibrate(500);
+              toast.warning(json.error || "Cet IMEI a déjà été scanné", {
+                position: "top-center",
+              });
             } else {
-              // === SUCCÈS PREMIÈRE FOIS ===
               setScannedCount((prev) => prev + 1);
               setHasScans(true);
               playSuccessBeep();
               if (navigator.vibrate) navigator.vibrate(150);
 
               toast.dismiss();
-              toast.success(`+1 (${produit.brand || ""} ${produit.model || ""} ${produit.capacity || ""} - Grade ${produit.revvoGrade || "N/A"})`,{ position: "top-center" });
+              toast.success(
+                `+1 (${produit.brand || ""} ${produit.model || ""} ${produit.capacity || ""} - Grade ${produit.revvoGrade || "N/A"})`,
+                { position: "top-center" },
+              );
 
               setShowScanPrompt(true);
               Quagga.stop();
@@ -226,14 +253,16 @@ function ScanContent() {
           } catch (err: any) {
             toast.dismiss();
             if (err.response?.status === 404) {
-              toast.error("IMEI inconnu dans la base",{ position: "top-center" });
+              toast.error("IMEI inconnu dans la base", {
+                position: "top-center",
+              });
             } else {
-              toast.error("Erreur lors de la vérification",{ position: "top-center" });
+              toast.error("Erreur lors de la vérification", {
+                position: "top-center",
+              });
             }
-            console.error("Erreur API externe:", err);
           }
 
-          // Re-démarre automatiquement (erreur ou duplicate)
           setTimeout(() => {
             if (isMounted.current) {
               Quagga.start();
@@ -285,18 +314,11 @@ function ScanContent() {
       clearTimeout(timer);
       cleanup();
     };
-  }, [router, currentInventaireId, scannerKey]); // ← scannerKey ajouté ici
-
-  const restartScanner = () => {
-    setScannedCount(0);
-    setHasScans(false);
-    setError("");
-    setIsScanning(false);
-  };
+  }, [currentInventaireId, scannerKey]);
 
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden items-center justify-center">
-      {/* Compteur fixe en haut – gardé tel quel */}
+      {/* Compteur fixe en haut */}
       <div className="fixed top-14 md:top-3 md:left-60 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
         <div className="bg-indigo-900 backdrop-blur-md px-5 py-2 rounded-full border border-emerald-500/20 shadow-lg">
           <p className="text-sm sm:text-base font-medium text-white/95">
@@ -314,9 +336,10 @@ function ScanContent() {
         </div>
       )}
 
-      {/* Zone de scan – gardée telle quelle */}
-      <div className="flex items-center justify-center w-88 px-4 mb-2 md:mb-10">
+      {/* ZONE DE SCAN AVEC CLÉ */}
+      <div className="flex items-center justify-center w-80 px-4 mb-2 md:mb-10">
         <div
+          key={scannerKey}
           id="scanner-viewport"
           className={`relative w-full max-w-[85vw] aspect-square bg-black rounded-2xl overflow-hidden border-4 ${isScanning ? "border-emerald-500" : "border-gray-700"} shadow-sm shadow-black/60 transition-all duration-300`}
         />
@@ -334,16 +357,18 @@ function ScanContent() {
         )}
       </div>
 
-      {/* Boutons fixes en bas – gardés tels quels */}
-      <div className="w-1/3 mx-auto mb-20 z-50  px-5 flex justify-center items-center  ">
+      {/* Bouton Résumé */}
+      <div className="w-1/3 mx-auto mb-20 z-50 px-5 flex justify-center items-center">
         <div className="flex justify-center items-center max-w-md mx-auto flex-wrap">
-          <Link href={
-            currentInventaireId && hasScans
-              ? `/resume?inventaireId=${currentInventaireId}`
-              : "#"
-          }>
+          <Link
+            href={
+              currentInventaireId && hasScans
+                ? `/resume?inventaireId=${currentInventaireId}`
+                : "#"
+            }
+          >
             <Button
-              className={`w-85 mx-auto px-3 py-2 lg:py-3 lg:px-6  rounded-xl font-semibold text-lg shadow-xl transition text-center md:px-8 ${
+              className={`w-85 mx-auto px-3 py-2 lg:py-3 lg:px-6 rounded-xl font-semibold text-lg shadow-xl transition text-center md:px-8 ${
                 !currentInventaireId || !hasScans
                   ? "opacity-50 cursor-not-allowed bg-indigo-400 text-white/70"
                   : "bg-indigo-600 text-white active:scale-95"
@@ -351,13 +376,17 @@ function ScanContent() {
               onClick={(e) => {
                 if (!currentInventaireId) {
                   e.preventDefault();
-                  toast.info("Inventaire non démarré",{ position: "top-center" });
+                  toast.info("Inventaire non démarré", {
+                    position: "top-center",
+                  });
                   return;
                 }
-
                 if (!hasScans) {
                   e.preventDefault();
-                  toast.warning("Veuillez scanner au moins un appareil pour voir le résumé",{ position: "top-center" });
+                  toast.warning(
+                    "Veuillez scanner au moins un appareil pour voir le résumé",
+                    { position: "top-center" },
+                  );
                   return;
                 }
               }}
@@ -368,15 +397,19 @@ function ScanContent() {
         </div>
       </div>
 
-      {/* Prompt "Scanner à nouveau ?" – inchangé */}
+      {/* Prompt Scanner à nouveau */}
       {showScanPrompt && (
         <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-6">
           <div className="bg-zinc-900 border border-emerald-500/30 rounded-3xl w-full max-w-sm p-8 text-center shadow-2xl">
             <div className="mx-auto mb-6 w-20 h-20 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
               <span className="text-5xl">✅</span>
             </div>
-            <h3 className="text-2xl font-semibold text-white mb-3">Scan réussi !</h3>
-            <p className="text-zinc-400 mb-8 text-lg">Voulez-vous scanner un autre appareil ?</p>
+            <h3 className="text-2xl font-semibold text-white mb-3">
+              Scan réussi !
+            </h3>
+            <p className="text-zinc-400 mb-8 text-lg">
+              Voulez-vous scanner un autre appareil ?
+            </p>
 
             <div className="flex gap-4">
               <Button
@@ -440,9 +473,6 @@ export default function ScannerPage() {
   );
 }
 
-
-
-
 // /* eslint-disable @typescript-eslint/no-unused-vars */
 // /* eslint-disable @typescript-eslint/no-explicit-any */
 // "use client";
@@ -471,7 +501,6 @@ export default function ScannerPage() {
 //   const router = useRouter();
 //   const isMounted = useRef(true);
 //   const quaggaInitialized = useRef(false);
-
 
 //     useEffect(() => {
 //   if (!currentInventaireId) return;
@@ -666,7 +695,7 @@ export default function ScannerPage() {
 //             // );
 //           } catch (err: any) {
 //             if (err.response?.status === 404) {
-              
+
 //               toast.error("IMEI inconnu dans la base",{ position: "top-center" });
 //             } else {
 //               toast.error("Erreur lors de la vérification",{ position: "top-center" });
@@ -735,9 +764,6 @@ export default function ScannerPage() {
 //     setError("");
 //     setIsScanning(false);
 //   };
-
-
-
 
 //   return (
 //     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden items-center justify-center">
@@ -825,7 +851,7 @@ export default function ScannerPage() {
 //           Résumé
 //         </Button>
 //           </Link>
-          
+
 //         </div>
 //       </div>
 
