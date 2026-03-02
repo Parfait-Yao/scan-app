@@ -1,5 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { NextConfig } from "next";
+import withPWAInit from "next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development",
+});
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
@@ -10,12 +19,10 @@ const nextConfig: NextConfig = {
 
   poweredByHeader: false,
 
-  serverExternalPackages: ["@prisma/client"],   // garde-le, c’est bien
+  serverExternalPackages: ["@prisma/client"],
 
-  // On supprime complètement le turbopack (il est invalide en Next.js 16)
-  experimental: {
-    // plus de turbopack ici
-  },
+  experimental: {},
 };
 
-export default nextConfig;
+// 🔥 CAST IMPORTANT ICI
+export default withPWA(nextConfig as any);

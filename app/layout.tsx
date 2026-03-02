@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider"; 
 import { TopNavbar } from "@/components/top-navbar";        
 import { Toaster } from "@/components/ui/sonner"
+import SWRegister from "./sw-register";
 
 
 const geistSans = Geist({
@@ -23,6 +24,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Scan Code",
   description: "Application de scan QR, codes-barres et documents",
+  manifest: "/manifest.json",
+};
+export const viewport = {
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -35,6 +40,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex`}
       >
+      <SWRegister />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
