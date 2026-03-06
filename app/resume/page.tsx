@@ -72,6 +72,7 @@ function ResumeContent() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
         const json = await res.json();
+        console.log("résumé reçu items :", json.items);
         if ('error' in json) throw new Error(json.error);
 
         setInventaire(json);

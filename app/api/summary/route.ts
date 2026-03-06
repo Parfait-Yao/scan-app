@@ -34,7 +34,7 @@ export async function GET(request: Request) {
       todayStart.setHours(0, 0, 0, 0);
 
       const lastInventaire = await prisma.inventaire.findFirst({
-        where: { date: { gte: todayStart } },
+        // where: { date: { gte: todayStart } },
         orderBy: { createdAt: "desc" },
       });
 
@@ -64,6 +64,8 @@ export async function GET(request: Request) {
       orderBy: { createdAt: "desc" },
     });
 
+    console.log("mes items :", items,"pour la taille :", items.length);
+    
     if (items.length === 0) {
       return NextResponse.json({
         produits: [],
@@ -152,6 +154,7 @@ export async function GET(request: Request) {
     }));
 
     return NextResponse.json({
+      items,
       produits: Object.values(grouped),
       scans: itemsAvecDetails,
       grandTotalByGrade,
