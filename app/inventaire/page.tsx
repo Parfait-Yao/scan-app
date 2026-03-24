@@ -8,6 +8,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaClipboardList, FaBarcode, FaCalendarAlt } from "react-icons/fa";
 import { BsUpcScan } from "react-icons/bs";
+import { FaTrash } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 
 // Import des composants shadcn Table
@@ -106,6 +107,33 @@ export default function InventairesPage() {
   useEffect(() => {
     loadInventaires();
   }, []);
+
+  // Supprimer un inventaire et ses scans
+  const deleteInventaire = async (id: number) => {
+    if (
+      !window.confirm(
+        `Supprimer l'inventaire #${id} et tous ses scans ? Cette action est irréversible.`
+      )
+    )
+      return;
+
+    try {
+      const res = await fetch(`/api/inventaire/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+
+      toast.success(json.message || `Inventaire #${id} supprimé !`, {
+        autoClose: 2000,
+      });
+
+      await loadInventaires();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      toast.error(message || "Erreur lors de la suppression de l'inventaire");
+    }
+  };
 
   // Créer un nouvel inventaire et rediriger
   const createNewInventaire = async () => {
@@ -295,10 +323,17 @@ export default function InventairesPage() {
                         <Button>Voir détails</Button>
                       </Link>
 
-                      <Link
-                        href={`/scan?inventaireId=${inv.id}`} >
-                        <Button className="bg-green-600 hover:bg-green-700 px-4 py-2  font-semibold shadow-lg transition text-sm text-white">Scanner</Button>
+                      <Link href={`/scan?inventaireId=${inv.id}`}>
+                        <Button className="bg-green-600 hover:bg-green-700 px-4 py-2 font-semibold shadow-lg transition text-sm text-white">Scanner</Button>
                       </Link>
+
+                      <Button
+                        onClick={() => deleteInventaire(inv.id)}
+                        className="bg-red-600 hover:bg-red-700 px-4 py-2 font-semibold shadow-lg transition text-sm text-white flex items-center gap-1"
+                      >
+                        <FaTrash className="text-xs" />
+                        Supprimer
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
