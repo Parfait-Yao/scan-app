@@ -292,6 +292,12 @@ function ScanContent() {
               // isProcessing reste true → bloqué jusqu'au prochain scan via continueScanning()
             }
           } catch (err: any) {
+            console.log("DEBUG ERROR:", {
+              message: err.message,
+              status: err.response?.status,
+              data: err.response?.data,
+              url: `${process.env.NEXT_PUBLIC_EXTERNAL_API_BASE}/product-serialize/${code}`,
+            });
             if (err.response?.status === 404) {
               toast.error("IMEI inconnu dans la base", {
                 id: "scan-error",
@@ -514,7 +520,6 @@ export default function ScannerPage() {
     </Suspense>
   );
 }
-
 
 // "use client";
 
