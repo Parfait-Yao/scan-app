@@ -26,6 +26,7 @@ interface Inventaire {
   date: string;
   createdAt: string;
   nbScans: number;
+  status?: string;
 }
 
 export default function InventairesPage() {
@@ -112,7 +113,7 @@ export default function InventairesPage() {
   const deleteInventaire = async (id: number) => {
     if (
       !window.confirm(
-        `Supprimer l'inventaire #${id} et tous ses scans ? Cette action est irréversible.`
+        `Supprimer l'inventaire #${id} et tous ses scans ? Cette action est irréversible.`,
       )
     )
       return;
@@ -194,6 +195,34 @@ export default function InventairesPage() {
       </div>
     );
   }
+
+  const completeInventaire = async (id: number) => {
+    if (!window.confirm(`Terminer l'inventaire #${id} ?`)) return;
+
+    try {
+      const res = await fetch("/api/inventaire/complete", {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        body: JSON.stringify({ inventaireId: id }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+
+      toast.success(`Inventaire #${id} terminé ✔️`, {
+        autoClose: 2000,
+      });
+
+      await loadInventaires();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      toast.error(message || "Erreur lors de la finalisation");
+    }
+  };
 
   return (
     <div className="min-h-screen ">
@@ -324,7 +353,9 @@ export default function InventairesPage() {
                       </Link>
 
                       <Link href={`/scan?inventaireId=${inv.id}`}>
-                        <Button className="bg-green-600 hover:bg-green-700 px-4 py-2 font-semibold shadow-lg transition text-sm text-white">Scanner</Button>
+                        <Button className="bg-green-600 hover:bg-green-700 px-4 py-2 font-semibold shadow-lg transition text-sm text-white">
+                          Scanner
+                        </Button>
                       </Link>
 
                       <Button
@@ -333,6 +364,12 @@ export default function InventairesPage() {
                       >
                         <FaTrash className="text-xs" />
                         Supprimer
+                      </Button>
+                      <Button
+                        onClick={() => completeInventaire(inv.id)}
+                        className="bg-blue-600 hover:bg-blue-700 px-4 py-2 font-semibold shadow-lg transition text-sm text-white"
+                      >
+                        Terminer
                       </Button>
                     </TableCell>
                   </TableRow>
