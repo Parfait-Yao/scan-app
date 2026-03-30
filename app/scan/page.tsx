@@ -236,9 +236,7 @@ function ScanContent() {
           lastProcessedTime.current = now;
 
           try {
-            const response = await axios.get(
-              `${process.env.NEXT_PUBLIC_EXTERNAL_API_BASE}/product-serialize/${code}`,
-            );
+            const response = await axios.get(`/api/product?code=${code}`);
             const produit = response.data;
 
             if (!produit || !produit.imei) {
