@@ -1,38 +1,44 @@
-// app/api/inventaire/route.ts
-import { prisma } from '@/lib/prisma';
-import { NextResponse } from 'next/server';
+export const runtime = "nodejs";
 
-// Interface pour les inventaires bruts (retour de findMany)
+import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
+// Si ton id Prisma est un Int autoincrement()
 interface InventaireBase {
   id: number;
   date: Date;
   createdAt: Date;
 }
 
-// Interface pour le résumé envoyé au frontend
 interface InventaireResume extends InventaireBase {
-  nbScans: number; // nombre d'appareils scannés dans cet inventaire
+  nbScans: number;
 }
 
 export async function GET() {
   try {
-    const inventaires: InventaireBase[] = await prisma.inventaire.findMany({
+    const inventaires = await prisma.inventaire.findMany({
       select: {
         id: true,
         date: true,
         createdAt: true,
       },
-      orderBy: { createdAt: 'desc' }, // plus récents en premier
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
-    // Calcul dynamique du nombre de scans par inventaire
     const inventairesAvecNbScans: InventaireResume[] = await Promise.all(
-      inventaires.map(async (inv: InventaireBase) => {
+      inventaires.map(async (inv) => {
         const nbScans = await prisma.inventaireItem.count({
-          where: { inventaireId: inv.id },
+          where: {
+            inventaireId: inv.id,
+          },
         });
+
         return {
-          ...inv,
+          id: inv.id,
+          date: inv.date,
+          createdAt: inv.createdAt,
           nbScans,
         };
       })
@@ -42,9 +48,18 @@ export async function GET() {
       success: true,
       inventaires: inventairesAvecNbScans,
     });
-  } catch (error) {
-    console.error('Erreur liste inventaires:', error);
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+  } catch (error: any) {
+    console.error("Erreur liste inventaires complète :", error);
+    console.error("Message :", error?.message);
+    console.error("Stack :", error?.stack);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || "Erreur serveur lors de la récupération des inventaires",
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -59,11 +74,20 @@ export async function POST() {
     return NextResponse.json({
       success: true,
       id: inventaire.id,
-      date: inventaire.date.toISOString(),
+      date: inventaire.date,
       message: `Nouvel inventaire #${inventaire.id} créé`,
     });
-  } catch (error) {
-    console.error('Erreur création inventaire:', error);
-    return NextResponse.json({ error: 'Erreur lors de la création de l’inventaire' }, { status: 500 });
+  } catch (error: any) {
+    console.error("Erreur création inventaire complète :", error);
+    console.error("Message :", error?.message);
+    console.error("Stack :", error?.stack);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || "Erreur lors de la création de l’inventaire",
+      },
+      { status: 500 }
+    );
   }
 }
