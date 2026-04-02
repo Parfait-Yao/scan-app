@@ -8,6 +8,7 @@ interface InventaireBase {
   id: number;
   date: Date;
   createdAt: Date;
+  scanType: string;
 }
 
 interface InventaireResume extends InventaireBase {
@@ -21,6 +22,7 @@ export async function GET() {
         id: true,
         date: true,
         createdAt: true,
+        scanType: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -39,9 +41,10 @@ export async function GET() {
           id: inv.id,
           date: inv.date,
           createdAt: inv.createdAt,
+          scanType: inv.scanType,
           nbScans,
         };
-      })
+      }),
     );
 
     return NextResponse.json({
@@ -56,18 +59,31 @@ export async function GET() {
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || "Erreur serveur lors de la récupération des inventaires",
+        error:
+          error?.message ||
+          "Erreur serveur lors de la récupération des inventaires",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    let scanType = "BARCODE";
+    try {
+      const body = await request.json();
+      if (body.scanType) {
+        scanType = body.scanType;
+      }
+    } catch (e) {
+      // Body vide
+    }
+
     const inventaire = await prisma.inventaire.create({
       data: {
         date: new Date(),
+        scanType,
       },
     });
 
@@ -87,7 +103,7 @@ export async function POST() {
         success: false,
         error: error?.message || "Erreur lors de la création de l’inventaire",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

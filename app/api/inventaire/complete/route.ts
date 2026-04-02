@@ -48,6 +48,8 @@ export async function POST(req: Request) {
     // 5. Définir les destinataires (3 emails)
     const recipients = [
       'parfait@revvo.africa',
+      'galliam@revvo.africa',
+      'christian@revvo.africa'
     ];
 
     console.log('📧 Envoi email à :', recipients);

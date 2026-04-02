@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { FaTableCells } from "react-icons/fa6";
 import { BsUpcScan } from "react-icons/bs";
+import { FaQrcode } from "react-icons/fa";
 import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ interface InventaireItem {
   status: string;
   quantite: number;
   dateScan: string;
+  scanType?: string;
 }
 
 interface SummaryResponse {
@@ -61,6 +63,7 @@ function ResumeContent() {
   const [inventaire, setInventaire] = useState<SummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'BARCODE' | 'QR'>('BARCODE');
 
   useEffect(() => {
     const fetchResume = async () => {
@@ -86,6 +89,62 @@ function ResumeContent() {
     fetchResume();
   }, [inventaireId]);
 
+  // ─── Tous les useMemo AVANT tout return conditionnel ──────────────────────
+  // (Règle des Hooks : jamais après un return conditionnel)
+
+  const allScans = inventaire?.scans ?? [];
+  const date = inventaire?.date ?? new Date().toLocaleDateString('fr-FR', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+
+  // Filtrage local par onglet (BARCODE ou QR)
+  const scans = useMemo(
+    () => allScans.filter((s) => (s.scanType || 'BARCODE') === activeTab),
+    [allScans, activeTab]
+  );
+
+  // Recalcul produits groupés sur les scans filtrés
+  const produits = useMemo(() => {
+    const grouped: Record<string, {
+      model: string; capacity: string; color: string;
+      revvoGrade: string; quantiteTotale: number;
+    }> = {};
+    for (const item of scans) {
+      const key = `${item.model || 'Inconnu'}-${item.capacity || 'Inconnu'}-${item.color || 'Inconnu'}-${item.revvoGrade || 'Inconnu'}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          model: item.model || 'Inconnu',
+          capacity: item.capacity || 'Inconnu',
+          color: item.color || 'Inconnu',
+          revvoGrade: item.revvoGrade || 'Inconnu',
+          quantiteTotale: 0,
+        };
+      }
+      grouped[key].quantiteTotale += item.quantite || 1;
+    }
+    return Object.values(grouped);
+  }, [scans]);
+
+  // Totaux par grade sur les scans filtrés
+  const grandTotalByGrade = useMemo(() => {
+    const totals: Record<string, number> = { 'A+': 0, A: 0, B: 0, C: 0, D: 0 };
+    for (const p of produits) {
+      if (p.revvoGrade in totals) {
+        totals[p.revvoGrade] += p.quantiteTotale;
+      } else {
+        totals['Inconnu'] = (totals['Inconnu'] || 0) + p.quantiteTotale;
+      }
+    }
+    return totals;
+  }, [produits]);
+
+  const totalGeneral = useMemo(
+    () => Object.values(grandTotalByGrade).reduce((sum, val) => sum + val, 0),
+    [grandTotalByGrade]
+  );
+
+  // ─── Returns conditionnels APRÈS tous les hooks ────────────────────────────
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-xl">Chargement...</div>;
   }
@@ -107,12 +166,6 @@ function ResumeContent() {
     );
   }
 
-  const produits = inventaire.produits || [];
-  const scans = inventaire.scans || [];
-  const date = inventaire.date || new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const grandTotalByGrade = inventaire.grandTotalByGrade || {};
-  const totalGeneral = inventaire.grandTotal || 0;
-  
 
   const downloadPDF = () => {
   const doc = new jsPDF('landscape');

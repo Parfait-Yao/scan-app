@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { FaClipboardList, FaBarcode, FaCalendarAlt } from "react-icons/fa";
+import { FaClipboardList, FaBarcode, FaCalendarAlt, FaQrcode } from "react-icons/fa";
 import { BsUpcScan } from "react-icons/bs";
 import { FaTrash } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
@@ -21,18 +21,34 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 interface Inventaire {
   id: number;
   date: string;
   createdAt: string;
   nbScans: number;
   status?: string;
+  scanType?: string;
 }
+
+type ScanTab = "BARCODE" | "QR";
 
 export default function InventairesPage() {
   const [inventaires, setInventaires] = useState<Inventaire[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ScanTab>("BARCODE");
   const router = useRouter();
 
   // État pour le thème (light ou dark)
@@ -111,13 +127,6 @@ export default function InventairesPage() {
 
   // Supprimer un inventaire et ses scans
   const deleteInventaire = async (id: number) => {
-    if (
-      !window.confirm(
-        `Supprimer l'inventaire #${id} et tous ses scans ? Cette action est irréversible.`,
-      )
-    )
-      return;
-
     try {
       const res = await fetch(`/api/inventaire/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -136,10 +145,14 @@ export default function InventairesPage() {
     }
   };
 
-  // Créer un nouvel inventaire et rediriger
-  const createNewInventaire = async () => {
+  // Créer un nouvel inventaire (BARCODE ou QR) et rediriger
+  const createNewInventaire = async (mode: "BARCODE" | "QR" = "BARCODE") => {
     try {
-      const res = await fetch("/api/inventaire", { method: "POST" });
+      const res = await fetch("/api/inventaire", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanType: mode }),
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const json = await res.json();
@@ -152,13 +165,22 @@ export default function InventairesPage() {
       // Rafraîchir la liste
       await loadInventaires();
 
-      // Rediriger vers scanner avec le nouvel ID
-      router.push(`/scan?inventaireId=${json.id}`);
+      // Rediriger : QR ajoute &mode=QR dans l'URL
+      const destination =
+        mode === "QR"
+          ? `/scan?inventaireId=${json.id}&mode=QR`
+          : `/scan?inventaireId=${json.id}`;
+      router.push(destination);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Erreur inconnue";
       toast.error(message || "Erreur lors de la création de l’inventaire");
     }
   };
+
+  // Filtrage par onglet actif
+  const filteredInventaires = inventaires.filter(
+    (inv) => (inv.scanType || "BARCODE") === activeTab
+  );
 
   // Stats des cards
   const totalInventaires = inventaires.length;
@@ -292,20 +314,51 @@ export default function InventairesPage() {
       </div>
 
       <main className="max-w-7xl mx-auto flex flex-col gap-6 justify-center items-center">
-        {/* Bouton créer – inchangé */}
-        <div className="mb-8 text-center">
+        {/* Boutons créer */}
+        <div className="mb-4 flex flex-wrap justify-center gap-4">
           <button
-            onClick={createNewInventaire}
-            className="flex justify-center items-center bg-linear-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 px-6 py-2 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 text-white"
+            onClick={() => createNewInventaire("BARCODE")}
+            className="flex justify-center items-center gap-2 bg-linear-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 px-6 py-2 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 text-white"
           >
-            <BsUpcScan className="mr-2" />
-            Créer un nouvel inventaire
+            <BsUpcScan />
+            Créer inventaire Code-barres
+          </button>
+          <button
+            onClick={() => createNewInventaire("QR")}
+            className="flex justify-center items-center gap-2 bg-linear-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 px-6 py-2 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 text-white"
+          >
+            <FaQrcode />
+            Créer inventaire QR Code
           </button>
         </div>
 
-        {inventaires.length === 0 ? (
+        {/* Onglets Code-barres / QR */}
+        <div className="flex rounded-xl overflow-hidden border border-gray-300 dark:border-gray-700 mb-2">
+          <button
+            onClick={() => setActiveTab("BARCODE")}
+            className={`px-6 py-2 text-sm font-semibold transition-all ${
+              activeTab === "BARCODE"
+                ? "bg-emerald-600 text-white"
+                : "bg-white/60 dark:bg-gray-900/60 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
+          >
+            <BsUpcScan className="inline mr-1" /> Code-barres
+          </button>
+          <button
+            onClick={() => setActiveTab("QR")}
+            className={`px-6 py-2 text-sm font-semibold transition-all ${
+              activeTab === "QR"
+                ? "bg-purple-600 text-white"
+                : "bg-white/60 dark:bg-gray-900/60 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
+          >
+            <FaQrcode className="inline mr-1" /> QR Code
+          </button>
+        </div>
+
+        {filteredInventaires.length === 0 ? (
           <p className="text-center text-gray-600 dark:text-gray-400 text-xl">
-            Aucun inventaire disponible
+            Aucun inventaire {activeTab === "QR" ? "QR Code" : "Code-barres"} disponible
           </p>
         ) : (
           <div className="w-full overflow-x-auto rounded-sm border border-gray-300 dark:border-gray-700 shadow-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm">
@@ -328,7 +381,7 @@ export default function InventairesPage() {
               </TableHeader>
 
               <TableBody>
-                {inventaires.map((inv) => (
+                {filteredInventaires.map((inv) => (
                   <TableRow
                     key={inv.id}
                     className="border-b border-gray-300 dark:border-gray-800 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 transition"
@@ -352,19 +405,47 @@ export default function InventairesPage() {
                         <Button>Voir détails</Button>
                       </Link>
 
-                      <Link href={`/scan?inventaireId=${inv.id}`}>
+                      <Link
+                        href={
+                          (inv.scanType || "BARCODE") === "QR"
+                            ? `/scan?inventaireId=${inv.id}&mode=QR`
+                            : `/scan?inventaireId=${inv.id}`
+                        }
+                      >
                         <Button className="bg-green-600 hover:bg-green-700 px-4 py-2 font-semibold shadow-lg transition text-sm text-white">
                           Scanner
                         </Button>
                       </Link>
 
-                      <Button
-                        onClick={() => deleteInventaire(inv.id)}
-                        className="bg-red-600 hover:bg-red-700 px-4 py-2 font-semibold shadow-lg transition text-sm text-white flex items-center gap-1"
-                      >
-                        <FaTrash className="text-xs" />
-                        Supprimer
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            className="bg-red-600 hover:bg-red-700 px-4 py-2 font-semibold shadow-lg transition text-sm text-white flex items-center gap-1"
+                          >
+                            <FaTrash className="text-xs" />
+                            Supprimer
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-black dark:text-white">Êtes-vous sûr ?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
+                              Cette action est irréversible. Cela va supprimer définitivement l'inventaire #{inv.id} et tous ses scans associés.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white border-none">
+                              Annuler
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteInventaire(inv.id)}
+                              className="bg-red-600 hover:bg-red-700 text-white"
+                            >
+                              Oui, supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                       <Button
                         onClick={() => completeInventaire(inv.id)}
                         className="bg-blue-600 hover:bg-blue-700 px-4 py-2 font-semibold shadow-lg transition text-sm text-white"

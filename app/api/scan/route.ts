@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { imei, inventaireId, produit } = body;
+    const { imei, inventaireId, produit, scanType } = body;
 
     if (!imei?.trim() || !inventaireId || !produit) {
       return NextResponse.json({ error: 'Données incomplètes (IMEI, inventaireId ou produit manquant)' }, { status: 400 });
@@ -43,6 +43,7 @@ export async function POST(request: Request) {
         revvoGrade: produit.revvoGrade?.trim() || 'N/A',
         status: produit.status?.trim() || 'Disponible',
         inventaireId: id,
+        scanType: scanType || 'BARCODE',
         quantite: 1,
       },
     });

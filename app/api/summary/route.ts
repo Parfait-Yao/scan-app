@@ -4,14 +4,15 @@ import { NextResponse } from "next/server";
 
 type ItemSelected = {
   imei: string;
-  brand: string;
-  model: string;
-  capacity: string;
-  color: string;
-  revvoGrade: string;
-  status: string;
+  brand: string | null;
+  model: string | null;
+  capacity: string | null;
+  color: string | null;
+  revvoGrade: string | null;
+  status: string | null;
   createdAt: Date;
   quantite: number;
+  scanType: string;
 };
 
 export async function GET(request: Request) {
@@ -60,6 +61,7 @@ export async function GET(request: Request) {
         status: true,
         createdAt: true,
         quantite: true,
+        scanType: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -151,6 +153,7 @@ export async function GET(request: Request) {
       status: item.status || "N/A",
       quantite: item.quantite ?? 1,
       dateScan: item.createdAt.toISOString(),
+      scanType: item.scanType || "BARCODE",
     }));
 
     return NextResponse.json({

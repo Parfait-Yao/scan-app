@@ -2,17 +2,224 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Quagga from "@ericblade/quagga2";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import axios from "axios";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useQrScanner } from "@/hooks/use-qr-scanner";
+import { processScan } from "@/lib/scan-utils";
+
+// ─── QR Page Inline ─────────────────────────────────────────────────────────
+// Layout pleine page identique au scanner Quagga, mais pour les QR codes.
+// Aucun modal, aucun overlay.
+
+interface QrPageInlineProps {
+  inventaireId: number;
+  scannedCount: number;
+  hasScans: boolean;
+  onScanComplete: () => void;
+  onGoToResume: () => void;
+}
+
+const QR_VIEWPORT_ID = "qr-inline-viewport";
+
+function QrPageInline({
+  inventaireId,
+  scannedCount,
+  hasScans,
+  onScanComplete,
+  onGoToResume,
+}: QrPageInlineProps) {
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [lastProduct, setLastProduct] = useState<any>(null);
+  const [qrError, setQrError] = useState("");
+
+  // ✅ FIX : unlockScanner via ref pour briser la dépendance circulaire
+  const unlockScannerRef = useRef<() => void>(() => {});
+
+  const playBeep = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "square";
+      osc.frequency.setValueAtTime(1800, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.12);
+    } catch {}
+  };
+
+  const handleScanSuccess = useCallback(
+    async (decodedText: string) => {
+      try {
+        const { produit } = await processScan(decodedText, "QR", inventaireId);
+        setLastProduct(produit);
+        playBeep();
+        if (navigator.vibrate) navigator.vibrate(150);
+        toast.success(
+          `+1 (${produit.brand || ""} ${produit.model || ""} ${produit.capacity || ""} - Grade ${produit.revvoGrade || "N/A"})`,
+          { id: "qr-scan-success", position: "top-center" }
+        );
+        onScanComplete();
+        setShowPrompt(true);
+        // Le verrou sera libéré dans continueScanning() ou si l'utilisateur ferme le prompt
+      } catch (err: any) {
+        if (navigator.vibrate) navigator.vibrate(500);
+        const isDuplicate = err.message?.includes("déjà été scanné");
+        if (isDuplicate) {
+          toast.warning(err.message, { id: "qr-warn", position: "top-center" });
+        } else if (err.response?.status === 404 || err.status === 404) {
+          toast.error("IMEI inconnu dans la base", { id: "qr-err", position: "top-center" });
+        } else {
+          toast.error(err.message || "Erreur lors de la vérification", { id: "qr-err", position: "top-center" });
+        }
+        // ✅ Libère le verrou via ref (pas de dépendance circulaire)
+        setTimeout(() => unlockScannerRef.current(), 2500);
+      }
+    },
+    [inventaireId, onScanComplete]
+  );
+
+  const { isScanning, error: camError, unlockScanner } = useQrScanner({
+    elementId: QR_VIEWPORT_ID,
+    onScanSuccess: handleScanSuccess,
+    enabled: !showPrompt,
+  });
+
+  // Synchronise la ref avec la vraie fonction unlockScanner du hook
+  unlockScannerRef.current = unlockScanner;
+
+  const continueScanning = () => {
+    setShowPrompt(false);
+    // ✅ Le scanner redémarre automatiquement via enabled=true
+    // unlockScanner sera appelé via le hook quand enabled repasse à true
+  };
+
+  return (
+    <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden items-center justify-center">
+      {/* Compteur fixe — identique au mode barcode */}
+      <div className="fixed top-14 md:top-3 md:left-60 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
+        <div className="bg-indigo-900 backdrop-blur-md px-5 py-2 rounded-full border border-emerald-500/20 shadow-lg">
+          <p className="text-sm sm:text-base font-medium text-white/95">
+            Appareils scannés :{" "}
+            <span className="text-emerald-300 font-semibold">{scannedCount}</span>
+          </p>
+        </div>
+      </div>
+
+      {(camError || qrError) && (
+        <div className="w-full max-w-md bg-red-900/70 border border-red-600/50 text-red-100 p-4 rounded-xl mb-4 text-center shadow-lg">
+          <p className="font-medium">{camError || qrError}</p>
+        </div>
+      )}
+
+      {/* Zone de scan — même style que #scanner-viewport */}
+      <div className="flex items-center justify-center w-80 px-4 mb-2 md:mb-10">
+        <div
+          id={QR_VIEWPORT_ID}
+          className={`relative w-full max-w-[85vw] aspect-square bg-black rounded-2xl overflow-hidden border-4 ${
+            isScanning ? "border-emerald-500" : "border-gray-700"
+          } shadow-sm shadow-black/60 transition-all duration-300`}
+        />
+      </div>
+
+      <div className="text-center mb-4 md:mb-10">
+        {isScanning ? (
+          <p className="text-emerald-400 font-medium text-lg animate-pulse">
+            Scanning actif...
+          </p>
+        ) : (
+          <p className="text-amber-400 font-medium">
+            Préparation du scanner...
+          </p>
+        )}
+      </div>
+
+      {/* Bouton Résumé — identique au mode barcode */}
+      <div className="w-1/3 mx-auto mb-20 z-50 px-5 flex justify-center items-center">
+        <div className="flex justify-center items-center max-w-md mx-auto flex-wrap">
+          <Button
+            className={`w-85 mx-auto px-3 py-2 lg:py-3 lg:px-6 rounded-xl font-semibold text-lg shadow-xl transition text-center md:px-8 ${
+              !hasScans
+                ? "opacity-50 cursor-not-allowed bg-indigo-400 text-white/70"
+                : "bg-indigo-600 text-white active:scale-95"
+            }`}
+            onClick={() => {
+              if (!hasScans) {
+                toast.warning(
+                  "Veuillez scanner au moins un appareil pour voir le résumé",
+                  { position: "top-center" }
+                );
+                return;
+              }
+              onGoToResume();
+            }}
+          >
+            Résumé
+          </Button>
+        </div>
+      </div>
+
+      {/* Prompt "Scanner encore ?" — identique au mode barcode */}
+      {showPrompt && (
+        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-6">
+          <div className="bg-zinc-900 border border-emerald-500/30 rounded-3xl w-full max-w-sm p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-6 w-20 h-20 bg-emerald-500/10 rounded-2xl flex items-center justify-center">
+              <span className="text-5xl">✅</span>
+            </div>
+            <h3 className="text-2xl font-semibold text-white mb-3">Scan réussi !</h3>
+            {lastProduct && (
+              <p className="text-zinc-400 mb-2 text-sm">
+                {lastProduct.brand} {lastProduct.model} {lastProduct.capacity} — Grade {lastProduct.revvoGrade || "N/A"}
+              </p>
+            )}
+            <p className="text-zinc-400 mb-8 text-lg">
+              Voulez-vous scanner un autre appareil ?
+            </p>
+            <div className="flex gap-4">
+              <Button
+                onClick={() => setShowPrompt(false)}
+                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white py-3.5 rounded-2xl font-semibold text-base shadow"
+              >
+                Non
+              </Button>
+              <Button
+                onClick={continueScanning}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-semibold text-base shadow active:scale-95"
+              >
+                Oui
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        html, body, #__next { height: 100%; overflow: hidden; }
+        #${QR_VIEWPORT_ID} { position: relative; }
+        #${QR_VIEWPORT_ID} video {
+          width: 100% !important;
+          height: 100% !important;
+          object-fit: cover;
+        }
+      `}</style>
+    </div>
+  );
+}
 
 function ScanContent() {
   const searchParams = useSearchParams();
   const inventaireIdFromUrl = searchParams.get("inventaireId");
+  const modeFromUrl = searchParams.get("mode"); // "QR" ou null
+  const isQrMode = modeFromUrl === "QR";
 
   const [hasScans, setHasScans] = useState(false);
   const [scannedCount, setScannedCount] = useState(0);
@@ -118,6 +325,8 @@ function ScanContent() {
 
   useEffect(() => {
     if (!currentInventaireId) return;
+    // 🚫 En mode QR, on ne monte pas Quagga du tout
+    if (isQrMode) return;
 
     const cleanup = () => {
       isMounted.current = false;
@@ -363,6 +572,25 @@ function ScanContent() {
     };
   }, [currentInventaireId, scannerKey]);
 
+  // --- Mode QR : layout pleine page identique au scanner barcode ---
+  if (isQrMode && currentInventaireId) {
+    return (
+      <QrPageInline
+        inventaireId={currentInventaireId}
+        scannedCount={scannedCount}
+        hasScans={hasScans}
+        onScanComplete={() => {
+          setScannedCount((prev) => prev + 1);
+          setHasScans(true);
+        }}
+        onGoToResume={() =>
+          router.push(`/resume?inventaireId=${currentInventaireId}`)
+        }
+      />
+    );
+  }
+
+  // --- Mode BARCODE : interface Quagga inchangée ---
   return (
     <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden items-center justify-center">
       {/* Compteur fixe en haut */}
